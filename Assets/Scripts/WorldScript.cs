@@ -31,26 +31,22 @@ public class WorldScript : MonoBehaviour
 
     List<WorldObject> world_objects;
     Dictionary<Kind, WorldObject> world_prefabs;
-    static WorldScript world_script;
+    SignalErrorDelegate keepalive_error;
+    UpdateDelegate keepalive_update;
 
     static void CB_SignalError(string error)
     {
         Debug.LogError(error);
     }
 
-    /* NB. a non-static callback seems to "half-work"... */
-    static void CB_Update(int index, int kind, float[] data, int data_count)
-    {
-        world_script.UpdateWorldObject(index, (Kind)kind, data);
-    }
-
-    void UpdateWorldObject(int index, Kind kind, float[] data)
+    void CB_Update(int index, int kind1, float[] data, int data_count)
     {
         while (!(index < world_objects.Count))
             world_objects.Add(null);
 
         WorldObject wo = world_objects[index];
         Kind wo_kind = wo == null ? Kind.Destroyed : wo.kind;
+        Kind kind = (Kind)kind1;
 
         if (wo_kind != kind)
         {
@@ -100,9 +96,12 @@ public class WorldScript : MonoBehaviour
         }
 
         world_objects = new List<WorldObject>();
-        world_script = this;
 
-        if (pyunityvr_init(CB_SignalError, CB_Update) != 42)
+        /* the delegate object themselves must remain alive for the duration of the whole run! */
+        keepalive_error = CB_SignalError;
+        keepalive_update = CB_Update;
+
+        if (pyunityvr_init(keepalive_error, keepalive_update) != 42)
             Debug.LogError("pyunityvr_init() failed!");
 
         var gt = Controller.GlobalTracker(this);
@@ -140,66 +139,67 @@ public class WorldScript : MonoBehaviour
 
     /***************** Grip button *****************/
 
-    Vector3? grip_origin;
-    Controller grip_first;
-    Vector3? grip_delta;
+    Controller grip_first, grip_second;
+    Vector3 grip_delta;
     Quaternion grip_rotation;
     Vector3 grip_localcenter;
     float grip_scale;
 
     private void Gt_onGripDown(Controller controller)
     {
-        if (grip_origin == null || controller == grip_first)
+        Vector3 globalcenter;
+
+        if (controller == grip_first || grip_first == null)
         {
             grip_first = controller;
-            grip_origin = transform.position - controller.position;
-            grip_delta = null;
+            grip_second = null;
+            globalcenter = controller.position;
         }
         else
         {
-            Vector3 delta = controller.position - grip_first.position;
+            grip_second = controller;
+
+            Vector3 delta = grip_second.position - grip_first.position;
             grip_delta = delta;
             grip_rotation = Quaternion.Inverse(Quaternion.LookRotation(new Vector3(delta.x, 0, delta.z)))
                 * transform.rotation;
             grip_scale = transform.localScale.y / delta.magnitude;
-            Vector3 globalcenter = controller.position - delta * 0.5f;
-            grip_localcenter = transform.InverseTransformPoint(globalcenter);
+            globalcenter = grip_first.position + delta * 0.5f;
         }
+        grip_localcenter = transform.InverseTransformPoint(globalcenter);
     }
 
     private void Gt_onGripDrag(Controller controller)
     {
-        if (grip_delta == null)
+        if (controller != grip_first)
+            return;
+
+        Vector3 globalcenter_target;
+        if (grip_second == null)
         {
-            if (grip_origin == null)
-                return;
-            transform.position = grip_origin.Value + controller.position;
+            globalcenter_target = controller.position;
         }
-        else if (controller != grip_first)
+        else
         {
-            Vector3 delta = controller.position - grip_first.position;
+            Vector3 delta = grip_second.position - grip_first.position;
             transform.rotation = Quaternion.LookRotation(new Vector3(delta.x, 0, delta.z)) * grip_rotation;
 
             transform.localScale = Vector3.one * (delta.magnitude * grip_scale);
-
-            Vector3 globalcenter_target = controller.position - delta * 0.5f;
-            Vector3 globalcenter_current = transform.TransformPoint(grip_localcenter);
-            transform.position += globalcenter_target - globalcenter_current;
+            globalcenter_target = grip_first.position + delta * 0.5f;
         }
+        Vector3 globalcenter_current = transform.TransformPoint(grip_localcenter);
+        transform.position += globalcenter_target - globalcenter_current;
     }
 
     private void Gt_onGripUp(Controller controller)
     {
-        grip_delta = null;
+        if (controller == grip_first)
+            grip_first = grip_second;
+        grip_second = null;
 
-        if (controller == grip_first || grip_first == null)
-        {
-            grip_first = null;
-            grip_origin = null;
-        }
-        else
-        {
-            grip_origin = transform.position - grip_first.position;
-        }
+        /* now grip_second == null && grip_first != controller */
+
+        if (grip_first != null)
+            Gt_onGripDown(grip_first);
     }
 }
