@@ -14,6 +14,7 @@ public class WorldScript : MonoBehaviour
         PolygonHighlight = 103,
         SmallSphere = 200,
         Cylinder = 250,
+        Stem = 251,
     };
 
     public delegate void SignalErrorDelegate([In, MarshalAs(UnmanagedType.LPWStr)] string error);
@@ -116,7 +117,9 @@ public class WorldScript : MonoBehaviour
 
     private void Gt_onControllersUpdate(Controller[] controllers)
     {
-        var data = new float[controllers.Length * 4];
+        int j = controllers.Length * 4;
+        var data = new float[j + 1];
+        data[j] = transform.localScale.y;
 
         for (int i = 0; i < controllers.Length; i++)
         {

@@ -1,4 +1,3 @@
-import sys, os
 from PyUnityVR_cffi import ffi
 
 
@@ -6,6 +5,7 @@ _init_called = False
 _error_callback = None
 
 def signal_error(etype, value, tb):
+    import os, sys
     import traceback
     traceback.print_exception(etype, value, tb)
     # report by repeating the exception itself on the first two lines.

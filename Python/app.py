@@ -1,11 +1,10 @@
 from PyUnityVR_cffi import ffi
 from util import Vector3
+from model import Model
+from controller import ControllersMgr
+
 
 KIND_DESTROYED = 0
-
-
-class WorldObject(object):
-    _index = None
 
 
 class App(object):
@@ -14,16 +13,20 @@ class App(object):
         self.fn_update = fn_update
         self.freelists = {}
         self.pending_removes = {}
-        self.pending_updates = set()
+        self.pending_updates_seen = set()
+        self.pending_updates = []
         self.destroy_later = []
         self.num_world_objs = 0
-        self.controllers = []
+        self.model = Model()
+        self.ctrlmgr = ControllersMgr(self)
 
     def display(self, worldobj):
-        self.pending_updates.add(worldobj)
+        if worldobj not in self.pending_updates_seen:
+            self.pending_updates_seen.add(worldobj)
+            self.pending_updates.append(worldobj)
 
     def flash(self, worldobj):
-        self.pending_updates.add(worldobj)
+        self.display(worldobj)
         self.destroy_later.append(worldobj)
 
     def destroy(self, worldobj):
@@ -34,6 +37,17 @@ class App(object):
             if index is not None:
                 worldobj._index = None
                 self.pending_removes.setdefault(kind, []).append(index)
+
+    def add_edge(self, edge):
+        self.model.edges.append(edge)
+        self.display(edge)
+
+    def add_face(self, face):
+        self.model.faces.append(face)
+        self.display(face)
+
+    def scale_ctrl(self, distance):
+        return distance / self.model_scale
 
     def _really_update(self, worldobj):
         kind = worldobj._kind
@@ -52,29 +66,14 @@ class App(object):
         self.fn_update(index, kind, raw, len(raw))
 
     def handle_frame(self, num_controllers, controllers):
-        if len(self.controllers) != num_controllers:
-            from controller import Controller
-
-            while len(self.controllers) > num_controllers:
-                self.controllers.pop()
-            while len(self.controllers) < num_controllers:
-                self.controllers.append(Controller(self))
-
-        for i in range(num_controllers):
-            cpos = Vector3(controllers[i * 4],
-                           controllers[i * 4 + 1],
-                           controllers[i * 4 + 2])
-            pressed = int(controllers[i * 4 + 3])
-            self.controllers[i].update(cpos, pressed)
-
-        if num_controllers == 2:
-            self.controllers[0].update_together(self.controllers[1])
+        self.ctrlmgr.handle_controllers(num_controllers, controllers)
 
         # send updates... first all new or modified objects,
         # possibly reusing some indexes that are to be freed
         for go in self.pending_updates:
             self._really_update(go)
-        self.pending_updates.clear()
+        self.pending_updates_seen.clear()
+        del self.pending_updates[:]
 
         # then, we really free the indexes that are still marked as such
         for freelist in self.pending_removes.values():
@@ -84,6 +83,6 @@ class App(object):
 
         # finally, we move 'destroy_later' to 'pending_removes' for
         # the next frame
-        for go in self.destroy_later:
+        for go in reversed(self.destroy_later):
             self.destroy(go)
         del self.destroy_later[:]

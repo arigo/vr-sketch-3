@@ -1,4 +1,6 @@
-from app import WorldObject
+
+class WorldObject(object):
+    _index = None
 
 
 class Polygon(WorldObject):
@@ -44,8 +46,8 @@ class SmallSphere(WorldObject):
         return lst
 
 
-class Cylinder(WorldObject):
-    _kind = 250
+class Stem(WorldObject):
+    _kind = 251
 
     def __init__(self, end1, end2, color):
         self.end1 = end1
@@ -56,3 +58,7 @@ class Cylinder(WorldObject):
         lst = self.end1.tolist() + self.end2.tolist()
         lst.append(self.color)
         return lst
+
+
+class Cylinder(Stem):
+    _kind = 250
