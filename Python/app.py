@@ -1,6 +1,6 @@
 from PyUnityVR_cffi import ffi
+import util, model
 from util import Vector3
-from model import Model
 from controller import ControllersMgr
 
 
@@ -9,15 +9,16 @@ KIND_DESTROYED = 0
 
 class App(object):
 
-    def __init__(self, fn_update):
+    def __init__(self, fn_update, fn_approx_plane):
         self.fn_update = fn_update
+        util._approx_plane = fn_approx_plane
         self.freelists = {}
         self.pending_removes = {}
         self.pending_updates_seen = set()
         self.pending_updates = []
         self.destroy_later = []
         self.num_world_objs = 0
-        self.model = Model()
+        self.model = model.Model()
         self.ctrlmgr = ControllersMgr(self)
 
     def display(self, worldobj):

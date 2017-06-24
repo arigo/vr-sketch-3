@@ -13,6 +13,7 @@ public class WorldScript : MonoBehaviour
         ColoredPolygon = 102,
         PolygonHighlight = 103,
         SmallSphere = 200,
+        RectanglePointer = 201,
         Cylinder = 250,
         Stem = 251,
     };
@@ -20,9 +21,13 @@ public class WorldScript : MonoBehaviour
     public delegate void SignalErrorDelegate([In, MarshalAs(UnmanagedType.LPWStr)] string error);
     public delegate void UpdateDelegate(int index, int kind,
         [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)] float[] data, int data_count);
+    public delegate void ApproxPlaneDelegate(
+        [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] float[] points, int coord_count,
+        [Out, MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] float[] plane);
 
     [DllImport("PyUnityVR_cffi", CharSet = CharSet.Unicode)]
-    public static extern int pyunityvr_init(SignalErrorDelegate error, UpdateDelegate update);
+    public static extern int pyunityvr_init(SignalErrorDelegate error, UpdateDelegate update,
+                                            ApproxPlaneDelegate approx_plane);
     
     [DllImport("PyUnityVR_cffi")]
     public static extern int pyunityvr_frame(int num_ctrls, [In, MarshalAs(UnmanagedType.LPArray)] float[] controllers);
@@ -34,6 +39,7 @@ public class WorldScript : MonoBehaviour
     Dictionary<Kind, WorldObject> world_prefabs;
     SignalErrorDelegate keepalive_error;
     UpdateDelegate keepalive_update;
+    ApproxPlaneDelegate keepalive_approx_plane;
 
     static void CB_SignalError(string error)
     {
@@ -71,6 +77,20 @@ public class WorldScript : MonoBehaviour
             wo.UpdateWorldObject(data);
     }
 
+    void CB_ApproxPlane(float[] points, int coord_count, float[] plane)
+    {
+        Vector3[] pts = new Vector3[coord_count / 3];
+        for (int i = 0; i < pts.Length; i++)
+            pts[i] = new Vector3(points[3 * i],
+                                 points[3 * i + 1],
+                                 points[3 * i + 2]);
+        Plane result = VRSketch3.PlaneRecomputer.RecomputePlane(pts);
+        plane[0] = result.normal.x;
+        plane[1] = result.normal.y;
+        plane[2] = result.normal.z;
+        plane[3] = result.distance;
+    }
+
     private void Start()
     {
         world_prefabs = new Dictionary<Kind, WorldObject>();
@@ -101,8 +121,9 @@ public class WorldScript : MonoBehaviour
         /* the delegate object themselves must remain alive for the duration of the whole run! */
         keepalive_error = CB_SignalError;
         keepalive_update = CB_Update;
+        keepalive_approx_plane = CB_ApproxPlane;
 
-        if (pyunityvr_init(keepalive_error, keepalive_update) != 42)
+        if (pyunityvr_init(keepalive_error, keepalive_update, keepalive_approx_plane) != 42)
             Debug.LogError("pyunityvr_init() failed!");
 
         var gt = Controller.GlobalTracker(this);
@@ -143,7 +164,6 @@ public class WorldScript : MonoBehaviour
     /***************** Grip button *****************/
 
     Controller grip_first, grip_second;
-    Vector3 grip_delta;
     Quaternion grip_rotation;
     Vector3 grip_localcenter;
     float grip_scale;
@@ -163,7 +183,6 @@ public class WorldScript : MonoBehaviour
             grip_second = controller;
 
             Vector3 delta = grip_second.position - grip_first.position;
-            grip_delta = delta;
             grip_rotation = Quaternion.Inverse(Quaternion.LookRotation(new Vector3(delta.x, 0, delta.z)))
                 * transform.rotation;
             grip_scale = transform.localScale.y / delta.magnitude;

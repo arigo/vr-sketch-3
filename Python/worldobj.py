@@ -46,6 +46,16 @@ class SmallSphere(WorldObject):
         return lst
 
 
+class RectanglePointer(WorldObject):
+    _kind = 201
+
+    def __init__(self, position):
+        self.position = position
+
+    def getrawdata(self):
+        return self.position.tolist()
+
+
 class Stem(WorldObject):
     _kind = 251
 

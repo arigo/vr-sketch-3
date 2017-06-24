@@ -25,7 +25,7 @@ def signal_error(etype, value, tb):
     _error_callback(msg)
 
 @ffi.def_extern(onerror=signal_error)
-def pyunityvr_init(error_callback, fn_update):
+def pyunityvr_init(error_callback, fn_update, fn_approx_plane):
     global _init_called, _main, _error_callback
     _error_callback = error_callback
     if _init_called:
@@ -44,11 +44,15 @@ def pyunityvr_init(error_callback, fn_update):
         # Otherwise, we must reset _init_called to False here.
         _init_called = False
         from PyUnityVR import ffi_interface
-        ffi_interface.pyunityvr_init(error_callback, fn_update)
+        ffi_interface.pyunityvr_init(error_callback, fn_update, fn_approx_plane)
     else:
         _init_called = "in-progress"
         import main
-        _main = main.init(fn_update=fn_update)
+        def _approx_plane(coords):
+            result = ffi.new("float[4]")
+            fn_approx_plane(coords, len(coords), result)
+            return result
+        _main = main.init(fn_update=fn_update, fn_approx_plane=_approx_plane)
         if _main is None:
             _main = main
         _init_called = True

@@ -1169,26 +1169,32 @@ static int cffi_start_python(void)
 static void *_cffi_types[] = {
 /*  0 */ _CFFI_OP(_CFFI_OP_FUNCTION, 1), // int()(int, float *)
 /*  1 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 7), // int
-/*  2 */ _CFFI_OP(_CFFI_OP_POINTER, 17), // float *
+/*  2 */ _CFFI_OP(_CFFI_OP_POINTER, 23), // float *
 /*  3 */ _CFFI_OP(_CFFI_OP_FUNCTION_END, 0),
-/*  4 */ _CFFI_OP(_CFFI_OP_FUNCTION, 1), // int()(void(*)(wchar_t *), void(*)(int, int, float *, int))
-/*  5 */ _CFFI_OP(_CFFI_OP_POINTER, 14), // void(*)(wchar_t *)
-/*  6 */ _CFFI_OP(_CFFI_OP_POINTER, 8), // void(*)(int, int, float *, int)
-/*  7 */ _CFFI_OP(_CFFI_OP_FUNCTION_END, 0),
-/*  8 */ _CFFI_OP(_CFFI_OP_FUNCTION, 20), // void()(int, int, float *, int)
-/*  9 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 7),
-/* 10 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 7),
-/* 11 */ _CFFI_OP(_CFFI_OP_NOOP, 2),
-/* 12 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 7),
+/*  4 */ _CFFI_OP(_CFFI_OP_FUNCTION, 1), // int()(void(*)(wchar_t *), void(*)(int, int, float *, int), void(*)(float *, int, float *))
+/*  5 */ _CFFI_OP(_CFFI_OP_POINTER, 20), // void(*)(wchar_t *)
+/*  6 */ _CFFI_OP(_CFFI_OP_POINTER, 14), // void(*)(int, int, float *, int)
+/*  7 */ _CFFI_OP(_CFFI_OP_POINTER, 9), // void(*)(float *, int, float *)
+/*  8 */ _CFFI_OP(_CFFI_OP_FUNCTION_END, 0),
+/*  9 */ _CFFI_OP(_CFFI_OP_FUNCTION, 26), // void()(float *, int, float *)
+/* 10 */ _CFFI_OP(_CFFI_OP_NOOP, 2),
+/* 11 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 7),
+/* 12 */ _CFFI_OP(_CFFI_OP_NOOP, 2),
 /* 13 */ _CFFI_OP(_CFFI_OP_FUNCTION_END, 0),
-/* 14 */ _CFFI_OP(_CFFI_OP_FUNCTION, 20), // void()(wchar_t *)
-/* 15 */ _CFFI_OP(_CFFI_OP_POINTER, 21), // wchar_t *
-/* 16 */ _CFFI_OP(_CFFI_OP_FUNCTION_END, 0),
-/* 17 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 13), // float
-/* 18 */ _CFFI_OP(_CFFI_OP_POINTER, 0), // int(*)(int, float *)
-/* 19 */ _CFFI_OP(_CFFI_OP_POINTER, 4), // int(*)(void(*)(wchar_t *), void(*)(int, int, float *, int))
-/* 20 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 0), // void
-/* 21 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 16), // wchar_t
+/* 14 */ _CFFI_OP(_CFFI_OP_FUNCTION, 26), // void()(int, int, float *, int)
+/* 15 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 7),
+/* 16 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 7),
+/* 17 */ _CFFI_OP(_CFFI_OP_NOOP, 2),
+/* 18 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 7),
+/* 19 */ _CFFI_OP(_CFFI_OP_FUNCTION_END, 0),
+/* 20 */ _CFFI_OP(_CFFI_OP_FUNCTION, 26), // void()(wchar_t *)
+/* 21 */ _CFFI_OP(_CFFI_OP_POINTER, 27), // wchar_t *
+/* 22 */ _CFFI_OP(_CFFI_OP_FUNCTION_END, 0),
+/* 23 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 13), // float
+/* 24 */ _CFFI_OP(_CFFI_OP_POINTER, 0), // int(*)(int, float *)
+/* 25 */ _CFFI_OP(_CFFI_OP_POINTER, 4), // int(*)(void(*)(wchar_t *), void(*)(int, int, float *, int), void(*)(float *, int, float *))
+/* 26 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 0), // void
+/* 27 */ _CFFI_OP(_CFFI_OP_PRIMITIVE, 16), // wchar_t
 };
 
 static struct _cffi_externpy_s _cffi_externpy__pyunityvr_frame =
@@ -1207,19 +1213,20 @@ CFFI_DLLEXPORT int pyunityvr_frame(int a0, float * a1)
 static struct _cffi_externpy_s _cffi_externpy__pyunityvr_init =
   { "PyUnityVR_cffi.pyunityvr_init", (int)sizeof(int) };
 
-CFFI_DLLEXPORT int pyunityvr_init(void(* a0)(wchar_t *), void(* a1)(int, int, float *, int))
+CFFI_DLLEXPORT int pyunityvr_init(void(* a0)(wchar_t *), void(* a1)(int, int, float *, int), void(* a2)(float *, int, float *))
 {
-  char a[16];
+  char a[24];
   char *p = a;
   *(void(* *)(wchar_t *))(p + 0) = a0;
   *(void(* *)(int, int, float *, int))(p + 8) = a1;
+  *(void(* *)(float *, int, float *))(p + 16) = a2;
   _cffi_call_python(&_cffi_externpy__pyunityvr_init, p);
   return *(int *)p;
 }
 
 static const struct _cffi_global_s _cffi_globals[] = {
-  { "pyunityvr_frame", (void *)&_cffi_externpy__pyunityvr_frame, _CFFI_OP(_CFFI_OP_EXTERN_PYTHON, 18), (void *)pyunityvr_frame },
-  { "pyunityvr_init", (void *)&_cffi_externpy__pyunityvr_init, _CFFI_OP(_CFFI_OP_EXTERN_PYTHON, 19), (void *)pyunityvr_init },
+  { "pyunityvr_frame", (void *)&_cffi_externpy__pyunityvr_frame, _CFFI_OP(_CFFI_OP_EXTERN_PYTHON, 24), (void *)pyunityvr_frame },
+  { "pyunityvr_init", (void *)&_cffi_externpy__pyunityvr_init, _CFFI_OP(_CFFI_OP_EXTERN_PYTHON, 25), (void *)pyunityvr_init },
 };
 
 static const struct _cffi_type_context_s _cffi_type_context = {
@@ -1234,7 +1241,7 @@ static const struct _cffi_type_context_s _cffi_type_context = {
   0,  /* num_enums */
   0,  /* num_typenames */
   NULL,  /* no includes */
-  22,  /* num_types */
+  28,  /* num_types */
   1,  /* flags */
 };
 

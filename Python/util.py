@@ -31,3 +31,29 @@ class Vector3(object):
 
     def dot(self, other):
         return self.x * other.x + self.y * other.y + self.z * other.z
+
+    def cross(self, other):
+        return Vector3(self.y * other.z - self.z * other.y,
+                       self.z * other.x - self.x * other.z,
+                       self.x * other.y - self.y * other.x)
+
+    def normalized(self):
+        return self * (1.0 / abs(self))
+
+
+class Plane(object):
+    def __init__(self, normal, distance):
+        self.normal = normal
+        self.distance = distance
+
+    @staticmethod
+    def from_vertices(vertices):
+        # _approx_plane() is injected in this module's globals by App.__init__()
+        lst = []
+        for v in vertices:
+            lst += v.tolist()
+        result = _approx_plane(lst)
+        return Plane(Vector3(result[0], result[1], result[2]), result[3])
+
+    def distance_to_point(self, pt):
+        return self.normal.dot(pt) + self.distance
