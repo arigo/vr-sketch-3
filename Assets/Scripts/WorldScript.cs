@@ -14,8 +14,10 @@ public class WorldScript : MonoBehaviour
         PolygonHighlight = 103,
         SmallSphere = 200,
         RectanglePointer = 201,
+        CrossPointer = 202,
         Cylinder = 250,
         Stem = 251,
+        DashedStem = 252,
     };
 
     public delegate void SignalErrorDelegate([In, MarshalAs(UnmanagedType.LPWStr)] string error);

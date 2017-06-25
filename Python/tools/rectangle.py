@@ -1,5 +1,5 @@
-from worldobj import ColoredPolygon, RectanglePointer, Cylinder
-from util import Vector3
+from worldobj import ColoredPolygon, RectanglePointer, Cylinder, CrossPointer
+from util import Vector3, WholeSpace, EmptyIntersection
 from model import EPSILON
 import selection
 
@@ -19,6 +19,12 @@ class Rectangle(object):
         if self.clicking_gen is not None:
             self.clicking_gen.throw(GeneratorExit)
             self.clicking_gen = None
+
+    def other_ctrl(self, controllers):
+        for ctrl in controllers:
+            if ctrl is not self.follow_ctrl:
+                return ctrl
+        return None
 
     def handle_controllers(self, controllers):
         if self.clicking_gen is None:
@@ -42,7 +48,6 @@ class Rectangle(object):
             self.cancel()
 
         else:
-            self.controllers = controllers
             try:
                 self.clicking_gen.next()
             except StopIteration:
@@ -50,12 +55,47 @@ class Rectangle(object):
                 if self.rectangle:
                     self.app.model.new_face_from_vertices(self.app, self.rectangle)
             else:
-                self.initial_selection.flash(selection.SelectedColorScheme)
+                # Compute the target "selection" object from what we hover over
                 closest = selection.find_closest(self.app, self.follow_ctrl.position)
+
+                # Start computing the affine subspace for alignments
+                subspace = WholeSpace()
                 if isinstance(closest, selection.SelectVoid):
-                    closest.move_to_aligned_plane(self.initial_selection.get_point())
+                    p1 = self.initial_selection.get_point()
+                    diff = closest.get_point() - p1
+                    snap = diff.closest_axis_plane(selection.DISTANCE_VERTEX_MIN)
+                    if snap is not None:
+                        subspace = Plane.from_point_and_normal(p1, Vector3.from_axis(snap))
+                
+                # Factor in the other controller's position
+                ctrl = self.other_ctrl(controllers)
+                if ctrl is not None:
+                    closest2 = selection.find_closest(self.app, ctrl.position)
+                    self.app.flash(CrossPointer(closest2.get_point()))
+
+                    # Get the "guides" from the other controller's selection, which are
+                    # affine subspaces, and find if we're close to one of them
+                    best_guide = None
+                    best_guide_distance = 1.0
+                    for guide in closest2.alignment_guides():
+                        guide_distance = guide.selection_distance(self.app, closest.get_point())
+                        if guide_distance < best_guide_distance:
+                            best_guide_distance = guide_distance
+                            best_guide = guide
+                    if best_guide is not None:
+                        try:
+                            subspace = subspace.intersect(best_guide)
+                        except EmptyIntersection:
+                            pass
+
+                # Shift the target position to the alignment subspace
+                closest.adjust(subspace.project_point_inside(closest.get_point()))
+
+                # Draw the initial and final point
+                self.initial_selection.flash(selection.SelectedColorScheme)
                 closest.flash(selection.TargetColorScheme)
 
+                # Build the rectangle based on these two points
                 p1 = self.initial_selection.get_point()
                 p3 = closest.get_point()
 

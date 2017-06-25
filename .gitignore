@@ -36,5 +36,6 @@ Assets/SteamVR/
 *.pyc
 *~
 .*.sw?
+.cache/
 Assets/Plugins/Release/
 Assets/Plugins/Release.meta

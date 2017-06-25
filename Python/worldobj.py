@@ -56,6 +56,10 @@ class RectanglePointer(WorldObject):
         return self.position.tolist()
 
 
+class CrossPointer(RectanglePointer):
+    _kind = 202
+
+
 class Stem(WorldObject):
     _kind = 251
 
@@ -72,3 +76,7 @@ class Stem(WorldObject):
 
 class Cylinder(Stem):
     _kind = 250
+
+
+class DashedStem(Stem):
+    _kind = 252

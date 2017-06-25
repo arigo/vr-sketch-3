@@ -1,10 +1,10 @@
 from worldobj import Cylinder, SmallSphere, PolygonHighlight
-from util import Vector3
+from util import Vector3, SinglePoint, WholeSpace, Plane, Line
 
 
-DISTANCE_VERTEX_MIN = 0.05
-DISTANCE_EDGE_MIN = 0.044
-DISTANCE_FACE_MIN = 0.04
+DISTANCE_VERTEX_MIN = SinglePoint._SELECTION_DISTANCE
+DISTANCE_EDGE_MIN = Line._SELECTION_DISTANCE
+DISTANCE_FACE_MIN = Plane._SELECTION_DISTANCE
 
 class HoverColorScheme:
     VERTEX = 0x80FFFF
@@ -36,6 +36,17 @@ class SelectVertex(object):
     def get_point(self):
         return self.vertex.position
 
+    def get_subspace(self):
+        return SinglePoint(self.vertex.position)
+
+    def adjust(self, pt):
+        pass
+
+    def alignment_guides(self):
+        yield Plane.from_point_and_normal(self.vertex.position, Vector3(1, 0, 0))
+        yield Plane.from_point_and_normal(self.vertex.position, Vector3(0, 1, 0))
+        yield Plane.from_point_and_normal(self.vertex.position, Vector3(0, 0, 1))
+
 
 class SelectAlongEdge(object):
     def __init__(self, app, edge, fraction):
@@ -55,6 +66,27 @@ class SelectAlongEdge(object):
         p2 = self.edge.v2.position
         return p1 + (p2 - p1) * self.fraction
 
+    def get_subspace(self):
+        if self.fraction == 0.5:
+            return SinglePoint(self.get_point())
+        p1 = self.edge.v1.position
+        p2 = self.edge.v2.position
+        return Line(p1, (p2 - p1).normalized())
+
+    def adjust(self, pt):
+        if self.fraction != 0.5:
+            p1 = self.edge.v1.position
+            p2 = self.edge.v2.position
+            diff = p2 - p1
+            self.fraction = diff.dot(pt - p1) / diff.dot(diff)
+
+    def alignment_guides(self):
+        p1 = self.edge.v1.position
+        p2 = self.edge.v2.position
+        yield Line(p1, (p2 - p1).normalized())
+        if self.fraction == 0.5:
+            yield Plane.from_point_and_normal((p1 + p2) * 0.5, (p2 - p1).normalized())
+
 
 class SelectOnFace(object):
     def __init__(self, app, face, position):
@@ -69,6 +101,15 @@ class SelectOnFace(object):
     def get_point(self):
         return self.position
 
+    def get_subspace(self):
+        return self.face.plane
+
+    def adjust(self, pt):
+        self.position = self.face.plane.project_point_inside(pt)
+
+    def alignment_guides(self):
+        yield self.face.plane
+
 
 class SelectVoid(object):
     def __init__(self, app, position):
@@ -81,18 +122,14 @@ class SelectVoid(object):
     def get_point(self):
         return self.position
 
-    def move_to_aligned_plane(self, origin):
-        delta = self.position - origin
-        dx = abs(delta.x)
-        dy = abs(delta.y)
-        dz = abs(delta.z)
-        minimum = self.app.scale_ctrl(DISTANCE_VERTEX_MIN)
-        if dx < min(dy, dz, minimum):
-            self.position = Vector3(origin.x, self.position.y, self.position.z)
-        elif dy < min(dx, dz, minimum):
-            self.position = Vector3(self.position.x, origin.y, self.position.z)
-        elif dz < min(dx, dy, minimum):
-            self.position = Vector3(self.position.x, self.position.y, origin.z)
+    def get_subspace(self):
+        return WholeSpace()
+
+    def adjust(self, pt):
+        self.position = pt
+
+    def alignment_guides(self):
+        return []
 
 
 def find_closest(app, position):
@@ -128,7 +165,7 @@ def find_closest_face(app, position):
     closest = None
     distance_min = app.scale_ctrl(DISTANCE_FACE_MIN)
     for face in app.model.faces:
-        signed_distance = face.plane.distance_to_point(position)
+        signed_distance = face.plane.signed_distance_to_point(position)
         distance = abs(signed_distance)
         if distance < distance_min and face.point_is_inside(position):
             distance_min = distance * 1.01

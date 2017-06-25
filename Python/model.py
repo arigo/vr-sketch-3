@@ -1,9 +1,5 @@
-from util import Vector3, Plane
+from util import Vector3, Plane, EPSILON
 import worldobj
-
-
-INF = float("inf")
-EPSILON = 1e-4
 
 
 class Vertex(object):
