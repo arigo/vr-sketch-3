@@ -1,4 +1,4 @@
-from worldobj import ColoredPolygon, RectanglePointer
+from worldobj import ColoredPolygon, RectanglePointer, Cylinder
 from util import Vector3
 from model import EPSILON
 import selection
@@ -13,6 +13,7 @@ class Rectangle(object):
         self.app = app
         self.model = app.model
         self.clicking_gen = None
+        self.fixed_direction = "y"
 
     def cancel(self):
         if self.clicking_gen is not None:
@@ -56,17 +57,23 @@ class Rectangle(object):
                 closest.flash(selection.TargetColorScheme)
 
                 p1 = self.initial_selection.get_point()
-                p2 = closest.get_point()
-                if abs(p1.y - p2.y) < EPSILON:
-                    self.rectangle = [p1,
-                                      Vector3(p1.x, p1.y, p2.z), 
-                                      Vector3(p2.x, p1.y, p2.z),
-                                      Vector3(p2.x, p1.y, p1.z)]
-                else:
-                    self.rectangle = [p1,
-                                      Vector3(p1.x, p2.y, p1.z),
-                                      p2,
-                                      Vector3(p2.x, p1.y, p2.z)]
+                p3 = closest.get_point()
+
+                dx = abs(p1.x - p3.x)
+                dy = abs(p1.y - p3.y)
+                dz = abs(p1.z - p3.z)
+                if dx < EPSILON:
+                    self.fixed_direction = "y" if dy > dz else "z"
+                elif dy < EPSILON:
+                    self.fixed_direction = "x" if dx > dz else "z"
+                elif dz < EPSILON:
+                    self.fixed_direction = "x" if dx > dy else "y"
+
+                p2 = p1.withcoord(self.fixed_direction, getattr(p3, self.fixed_direction))
+                p4 = p3.withcoord(self.fixed_direction, getattr(p1, self.fixed_direction))
+                self.rectangle = [p1, p2, p3, p4]
+
+                self.app.flash(Cylinder(p1, p2, selection.SelectedColorScheme.EDGE))
                 self.app.flash(ColoredPolygon(self.rectangle, selection.TargetColorScheme.FACE))
                 
 

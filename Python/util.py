@@ -40,6 +40,11 @@ class Vector3(object):
     def normalized(self):
         return self * (1.0 / abs(self))
 
+    def withcoord(self, coord_name, newvalue):
+        v = Vector3(self.x, self.y, self.z)
+        setattr(v, coord_name, newvalue)
+        return v
+
 
 class Plane(object):
     def __init__(self, normal, distance):
