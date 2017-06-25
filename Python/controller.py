@@ -58,6 +58,6 @@ class ControllersMgr(object):
         if len(self.controllers) >= 2:
             if self.controllers[0].pressed & self.controllers[1].pressed & PRESS_GRIP:
                 self.app.flash(worldobj.Cylinder(
-                    self.controllers[0].pos, self.controllers[1].pos, color=0x202020))
+                    self.controllers[0].position, self.controllers[1].position, color=0x202020))
 
         self.tool.handle_controllers(self.controllers)
