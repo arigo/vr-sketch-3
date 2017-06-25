@@ -1,5 +1,5 @@
-from worldobj import ColoredPolygon, RectanglePointer, Cylinder, CrossPointer
-from util import Vector3, WholeSpace, EmptyIntersection
+from worldobj import ColoredPolygon, RectanglePointer, Cylinder, CrossPointer, DashedStem
+from util import Vector3, WholeSpace, EmptyIntersection, Plane
 from model import EPSILON
 import selection
 
@@ -68,6 +68,7 @@ class Rectangle(object):
                         subspace = Plane.from_point_and_normal(p1, Vector3.from_axis(snap))
                 
                 # Factor in the other controller's position
+                selection_guide = None
                 ctrl = self.other_ctrl(controllers)
                 if ctrl is not None:
                     closest2 = selection.find_closest(self.app, ctrl.position)
@@ -76,9 +77,11 @@ class Rectangle(object):
                     # Get the "guides" from the other controller's selection, which are
                     # affine subspaces, and find if we're close to one of them
                     best_guide = None
-                    best_guide_distance = 1.0
+                    best_guide_distance = (3, 0)
                     for guide in closest2.alignment_guides():
                         guide_distance = guide.selection_distance(self.app, closest.get_point())
+                        if guide_distance[1] > 1.0:
+                            continue
                         if guide_distance < best_guide_distance:
                             best_guide_distance = guide_distance
                             best_guide = guide
@@ -87,6 +90,8 @@ class Rectangle(object):
                             subspace = subspace.intersect(best_guide)
                         except EmptyIntersection:
                             pass
+                        else:
+                            selection_guide = closest2
 
                 # Shift the target position to the alignment subspace
                 closest.adjust(subspace.project_point_inside(closest.get_point()))
@@ -94,6 +99,11 @@ class Rectangle(object):
                 # Draw the initial and final point
                 self.initial_selection.flash(selection.SelectedColorScheme)
                 closest.flash(selection.TargetColorScheme)
+
+                if selection_guide:
+                    # Flash a dashed line to show that we have used the guide
+                    self.app.flash(DashedStem(selection_guide.get_point(), closest.get_point(),
+                                              selection.GuideColorScheme.EDGE))
 
                 # Build the rectangle based on these two points
                 p1 = self.initial_selection.get_point()

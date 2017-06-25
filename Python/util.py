@@ -97,9 +97,12 @@ class AffineSubspace(object):
         return abs(pt - self.project_point_inside(pt))
 
     def selection_distance(self, app, pt):
-        # Returns distance_to_point(pt), but scaled so that results < 1 are considered
-        # selected, and results > 1 not.
-        return app.scale_ctrl(self.distance_to_point(pt) / _SELECTION_DISTANCE)
+        # Compute distance_to_point(pt), but scaled in such a way that results > 1
+        # are considered too far to be selected.  Returns (family, scaled_distance)
+        # where 'family' is the dimensionality.  This allows results to be ordered.
+        d = app.scale_ctrl(self.distance_to_point(pt)) / self._SELECTION_DISTANCE
+        return (self._DIMENSIONALITY, d)
+            
 
 class EmptyIntersection(Exception):
     pass
@@ -107,6 +110,7 @@ class EmptyIntersection(Exception):
 
 class WholeSpace(AffineSubspace):
     _SELECTION_DISTANCE = 1
+    _DIMENSIONALITY = 3
 
     def project_point_inside(self, pt):
         return pt
@@ -120,6 +124,7 @@ class WholeSpace(AffineSubspace):
 
 class Plane(AffineSubspace):
     _SELECTION_DISTANCE = 0.04
+    _DIMENSIONALITY = 2
 
     def __init__(self, normal, distance):
         # NOTE: 'normal' is supposed to be normalized
@@ -136,7 +141,7 @@ class Plane(AffineSubspace):
         return Plane(Vector3(result[0], result[1], result[2]), result[3])
 
     @staticmethod
-    def from_point_and_normal(self, from_point, normal):
+    def from_point_and_normal(from_point, normal):
         return Plane(normal, -normal.dot(from_point))
 
     def signed_distance_to_point(self, pt):
@@ -171,6 +176,7 @@ class Plane(AffineSubspace):
 
 class Line(AffineSubspace):
     _SELECTION_DISTANCE = 0.044
+    _DIMENSIONALITY = 1
 
     def __init__(self, from_point, axis):
         # NOTE: 'axis' is supposed to be normalized
@@ -213,6 +219,7 @@ class Line(AffineSubspace):
 
 class SinglePoint(AffineSubspace):
     _SELECTION_DISTANCE = 0.05
+    _DIMENSIONALITY = 0
 
     def __init__(self, position):
         self.position = position

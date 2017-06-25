@@ -20,6 +20,7 @@ public class CylinderObject : WorldObject
         if (p1 != p2)
             transform.localRotation = Quaternion.LookRotation(p2 - p1) * Quaternion.LookRotation(Vector3.up);
         
-        GetComponent<MeshRenderer>().material.color = col;
+        foreach (var rend in GetComponents<MeshRenderer>())
+            rend.material.color = col;
     }
 }
