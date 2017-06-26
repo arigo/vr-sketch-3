@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace VRSketch3
 {
+#if false
     /* Linear and affine subspaces of the 3D space 
      */
 
@@ -266,6 +267,7 @@ namespace VRSketch3
             return other;
         }
     }
+#endif
 
 
     public static class PlaneRecomputer

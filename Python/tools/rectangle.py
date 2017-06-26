@@ -78,13 +78,14 @@ class Rectangle(object):
                     # affine subspaces, and find if we're close to one of them
                     best_guide = None
                     best_guide_distance = (3, 0)
-                    for guide in closest2.alignment_guides():
+                    for col1, col2, guide in closest2.alignment_guides():
                         guide_distance = guide.selection_distance(self.app, closest.get_point())
                         if guide_distance[1] > 1.0:
                             continue
                         if guide_distance < best_guide_distance:
                             best_guide_distance = guide_distance
                             best_guide = guide
+                            selection_guide_colors = col1, col2
                     if best_guide is not None:
                         try:
                             subspace = subspace.intersect(best_guide)
@@ -103,7 +104,7 @@ class Rectangle(object):
                 if selection_guide:
                     # Flash a dashed line to show that we have used the guide
                     self.app.flash(DashedStem(selection_guide.get_point(), closest.get_point(),
-                                              selection.GuideColorScheme.EDGE))
+                                              selection_guide_colors[0], selection_guide_colors[1]))
 
                 # Build the rectangle based on these two points
                 p1 = self.initial_selection.get_point()

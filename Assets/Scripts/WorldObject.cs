@@ -11,7 +11,7 @@ public abstract class WorldObject : MonoBehaviour
 
     static public Vector3 GetVec3(float[] data, int index)
     {
-        return new Vector3(data[index], data[index + 1], data[index + 2]);
+        return new Vector3(data[index], data[index + 2], data[index + 1]);
     }
 
     static public Color GetColor24(float[] data, int index)

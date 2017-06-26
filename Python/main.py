@@ -17,8 +17,8 @@ def init(**kwds):
     #app.display(SmallSphere(Vector3(1, 1, 1), color=0xFF0000))
     #app.display(Cylinder(Vector3(1, 1, 1), Vector3(0, 0.5, 0), color=0xD00000))
 
-    v1 = Vertex(Vector3(0, 1, 0))
-    v2 = Vertex(Vector3(1, 1, 0))
+    v1 = Vertex(Vector3(0, 0, 1))
+    v2 = Vertex(Vector3(1, 0, 1))
     v3 = Vertex(Vector3(1, 1, 1))
     v4 = Vertex(Vector3(0, 1, 1))
     e1 = Edge(v1, v2); app.add_edge(e1)

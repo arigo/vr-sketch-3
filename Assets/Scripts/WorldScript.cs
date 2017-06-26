@@ -154,8 +154,8 @@ public class WorldScript : MonoBehaviour
 
             Vector3 pos = transform.InverseTransformPoint(ctrl.position);
             data[o + 0] = pos.x;
-            data[o + 1] = pos.y;
-            data[o + 2] = pos.z;
+            data[o + 1] = pos.z;
+            data[o + 2] = pos.y;
             data[o + 3] = pressed;
         }
         if (pyunityvr_frame(controllers.Length, data) != 42)

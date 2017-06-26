@@ -24,9 +24,6 @@ class TargetColorScheme:
     VOID   = 0x00A000
     FACE   = 0x80FF80
 
-class GuideColorScheme:
-    EDGE   = 0xC0C0C0
-
 
 class SelectVertex(object):
     def __init__(self, app, vertex):
@@ -50,22 +47,23 @@ class SelectVertex(object):
 
 
 def _all_45degree_guides(position):
-    for axis in _ALL_45DEGREE_AXES:
-        yield Line(position, axis)
-    yield Plane.from_point_and_normal(position, Vector3(1, 0, 0))
-    yield Plane.from_point_and_normal(position, Vector3(0, 1, 0))
-    yield Plane.from_point_and_normal(position, Vector3(0, 0, 1))
+    for col1, col2, axis in _ALL_45DEGREE_AXES:
+        yield col1, col2, Line(position, axis)
+    yield 0x00D0D0, 0x00D0D0, Plane.from_point_and_normal(position, Vector3(1, 0, 0))
+    yield 0xD000D0, 0xD000D0, Plane.from_point_and_normal(position, Vector3(0, 1, 0))
+    yield 0xD0D000, 0xD0D000, Plane.from_point_and_normal(position, Vector3(0, 0, 1))
 
 _ALL_45DEGREE_AXES = [
-    Vector3(1, 0, 0),
-    Vector3(0, 1, 0),
-    Vector3(0, 0, 1),
-    Vector3(1, 1, 0).normalized(),
-    Vector3(1, 0, 1).normalized(),
-    Vector3(0, 1, 1).normalized(),
-    Vector3(1, -1, 0).normalized(),
-    Vector3(1, 0, -1).normalized(),
-    Vector3(0, 1, -1).normalized()]
+    (0xE00000, 0xE00000, Vector3(1, 0, 0)),
+    (0x00E000, 0x00E000, Vector3(0, 1, 0)),
+    (0x0000E0, 0x0000E0, Vector3(0, 0, 1)),
+    (0xE00000, 0x00E000, Vector3(1, 1, 0).normalized()),
+    (0xE00000, 0x0000E0, Vector3(1, 0, 1).normalized()),
+    (0x00E000, 0x0000E0, Vector3(0, 1, 1).normalized()),
+    (0xE00000, 0x00E000, Vector3(1, -1, 0).normalized()),
+    (0xE00000, 0x0000E0, Vector3(1, 0, -1).normalized()),
+    (0x00E000, 0x0000E0, Vector3(0, 1, -1).normalized()),
+    ]
 
 
 class SelectAlongEdge(object):
@@ -103,10 +101,10 @@ class SelectAlongEdge(object):
     def alignment_guides(self):
         p1 = self.edge.v1.position
         p2 = self.edge.v2.position
-        yield Line(p1, (p2 - p1).normalized())
+        yield 0x00FFFF, 0x00FFFF, Line(p1, (p2 - p1).normalized())
         if self.fraction == 0.5:
             p = (p1 + p2) * 0.5
-            yield Plane.from_point_and_normal(p, (p2 - p1).normalized())
+            yield 0x00FFFF, 0x00FFFF, Plane.from_point_and_normal(p, (p2 - p1).normalized())
             for guide in _all_45degree_guides(p):
                 yield guide
 
@@ -131,7 +129,7 @@ class SelectOnFace(object):
         self.position = self.face.plane.project_point_inside(pt)
 
     def alignment_guides(self):
-        yield self.face.plane
+        yield 0x00FFFF, 0x80FFFF, self.face.plane
 
 
 class SelectVoid(object):
