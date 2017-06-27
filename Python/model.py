@@ -73,6 +73,12 @@ class Face(worldobj.WorldObject):
             uv2 = uv1
         return side != 0
 
+    def find_vertex(self, vertex):
+        for i, edge in enumerate(self.edges):
+            if edge.v1 is vertex:
+                return i
+        return -1
+
     def getrawdata(self):
         lst = []
         for edge in self.edges:

@@ -15,6 +15,7 @@ public class WorldScript : MonoBehaviour
         SmallSphere = 200,
         RectanglePointer = 201,
         CrossPointer = 202,
+        MovePointer = 203,
         Cylinder = 250,
         Stem = 251,
         DashedStem = 252,

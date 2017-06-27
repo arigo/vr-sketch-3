@@ -12,6 +12,12 @@ class HoverColorScheme:
     VOID   = 0x00A0A0
     FACE   = 0x80FFFF
 
+class BluishHoverColorScheme:
+    VERTEX = 0x80C0FF
+    EDGE   = 0x009CD0
+    VOID   = 0x0078A0
+    FACE   = 0x80C0FF
+
 class SelectedColorScheme:
     VERTEX = 0xFF4040
     EDGE   = 0xD00000
@@ -160,27 +166,31 @@ class SelectVoid(object):
         return []
 
 
-def find_closest(app, position):
-    for attempt in [find_closest_vertex, find_closest_edge, find_closest_face, SelectVoid]:
-        result = attempt(app, position)
+def find_closest(app, position, ignore=None):
+    for attempt in [find_closest_vertex, find_closest_edge, find_closest_face]:
+        result = attempt(app, position, ignore=ignore)
         if result is not None:
             return result
-    raise AssertionError("unreachable")
-
-def find_closest_vertex(app, position):
+    return SelectVoid(app, position)
+    
+def find_closest_vertex(app, position, ignore=None):
     closest = None
     distance_min = app.scale_ctrl(DISTANCE_VERTEX_MIN)
     for v in app.model.all_vertices():
+        if v is ignore:
+            continue
         distance = abs(position - v.position)
         if distance < distance_min:
             distance_min = distance * 1.01
             closest = SelectVertex(app, v)
     return closest
 
-def find_closest_edge(app, position):
+def find_closest_edge(app, position, ignore=None):
     closest = None
     distance_min = app.scale_ctrl(DISTANCE_EDGE_MIN)
     for e in app.model.edges:
+        if e is ignore:
+            continue
         frac, distance = e.measure_distance(position)
         if 0 < frac < 1 and distance < distance_min:
             distance_min = distance * 1.01
@@ -189,10 +199,12 @@ def find_closest_edge(app, position):
             closest = SelectAlongEdge(app, e, frac)
     return closest
 
-def find_closest_face(app, position):
+def find_closest_face(app, position, ignore=None):
     closest = None
     distance_min = app.scale_ctrl(DISTANCE_FACE_MIN)
     for face in app.model.faces:
+        if face is ignore:
+            continue
         signed_distance = face.plane.signed_distance_to_point(position)
         distance = abs(signed_distance)
         if distance < distance_min and face.point_is_inside(position):

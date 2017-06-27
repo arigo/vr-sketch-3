@@ -55,9 +55,11 @@ class RectanglePointer(WorldObject):
     def getrawdata(self):
         return self.position.tolist()
 
-
 class CrossPointer(RectanglePointer):
     _kind = 202
+
+class MovePointer(RectanglePointer):
+    _kind = 203
 
 
 class Stem(WorldObject):
