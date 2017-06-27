@@ -54,7 +54,17 @@ public class WorldScript : MonoBehaviour
 
     static void CB_SignalError(string error)
     {
-        Debug.LogError(error);
+        if (error.StartsWith("INFO:"))
+        {
+            Debug.Log(error.Substring(5));
+        }
+        else
+        {
+            Debug.LogError(error);
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.Beep();
+#endif
+        }
     }
 
     void CB_Update(int index, int kind1, float[] data, int data_count)

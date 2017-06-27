@@ -22,7 +22,7 @@ class Move(BaseTool):
         return None
 
     def handle_cancel(self):
-        self.move_vertex_to(self.original_position)
+        self.move_vertex_to(self.source_position)
 
     def handle_drag(self, follow_ctrl, other_ctrl=None):
         self.handle_cancel()
@@ -35,7 +35,7 @@ class Move(BaseTool):
         try:
             subspace = subspace.intersect(closest.get_subspace())
         except EmptyIntersection:
-            closest = selection.SelectVoid(closest.get_point())
+            closest = selection.SelectVoid(self.app, closest.get_point())
 
         # Try to match the initial_selection's guides
         original_stem_color = (0x202020,)
@@ -59,53 +59,62 @@ class Move(BaseTool):
 
         # Factor in the other controller's position
         # XXX this part is almost a duplicate of the corresponding part from 'rectangle.py'
-        selection_guide = None
+        selection_guides = []
         if other_ctrl is not None:
             closest2 = selection.find_closest(self.app, other_ctrl.position)
             self.app.flash(CrossPointer(closest2.get_point()))
 
             # Get the "guides" from the other controller's selection, which are
-            # affine subspaces, and find if we're close to one of them
-            best_guide = None
-            best_guide_distance = (3, 0)
-            for col1, col2, guide in closest2.alignment_guides():
-                guide_distance = guide.selection_distance(self.app, closest.get_point())
-                if guide_distance[1] > 1.0:
-                    continue
-                if guide_distance < best_guide_distance:
-                    best_guide_distance = guide_distance
-                    best_guide = guide
-                    selection_guide_colors = col1, col2
-            if best_guide is not None:
-                try:
-                    subspace = subspace.intersect(best_guide)
-                except EmptyIntersection:
-                    pass
-                else:
-                    selection_guide = closest2
+            # affine subspaces, and find if one of the vertices we're moving is
+            # close to them
+            for mv in self.move_vertices:
+                best_guide = None
+                best_guide_distance = (3, 0)
+                for col1, col2, guide in closest2.alignment_guides():
+                    guide_distance = guide.selection_distance(self.app, closest.get_point() + mv.delta)
+                    if guide_distance[1] > 1.0:
+                        continue
+                    if guide_distance < best_guide_distance:
+                        best_guide_distance = guide_distance
+                        best_guide = guide
+                        # this lambda is used to make a DashedStem instance with the current value of the
+                        # variables *except* closest, which will take the adjusted value from later
+                        make_dashed_stem = (lambda closest2=closest2, mv=mv, col1=col1, col2=col2:
+                                            DashedStem(closest2.get_point(), closest.get_point() + mv.delta, col1, col2))
+                if best_guide is not None:
+                    try:
+                        subspace = subspace.intersect(best_guide.shifted(-mv.delta))
+                    except EmptyIntersection:
+                        pass
+                    else:
+                        selection_guides.append(make_dashed_stem)
 
         # Shift the target position to the alignment subspace
         closest.adjust(subspace.project_point_inside(closest.get_point()))
 
         # Draw a dashed line from the initial to the final point
-        self.app.flash(DashedStem(self.original_position, closest.get_point(),
+        self.app.flash(DashedStem(self.source_position, closest.get_point(),
                                   *original_stem_color))
 
-        if selection_guide:
+        for make_dashed_stem in selection_guides:
             # Flash a dashed line to show that we have used the guide
-            self.app.flash(DashedStem(selection_guide.get_point(), closest.get_point(),
-                                        selection_guide_colors[0], selection_guide_colors[1]))
+            self.app.flash(make_dashed_stem())
 
         # Actually move the vertex
         self.move_vertex_to(closest.get_point())
 
+
     def move_vertex_to(self, position):
-        self.initial_selection.vertex.position = position
+        for mv in self.move_vertices:
+            mv.vertex.position = position + mv.delta
         for upd in self.update_display:
             self.app.display(upd)
 
+
     def start_movement(self, ctrl, closest):
-        assert isinstance(closest, selection.SelectVertex), "XXX"
+        move_vertices = set(closest.individual_vertices())
+        if not move_vertices:
+            return None
 
         # compute the subspace inside which it's ok to move: we must not make any 
         # existing face non-planar
@@ -113,9 +122,12 @@ class Move(BaseTool):
         update_display = []
 
         for face in self.app.model.faces:
-            if face.find_vertex(closest.vertex) < 0:
-                continue
-            
+            for edge in face.edges:
+                if edge.v1 in move_vertices:
+                    break
+            else:
+                continue     # none of the move_vertices belong to this face
+
             update_display.append(face)
             update_display.extend(face.edges)
 
@@ -124,7 +136,7 @@ class Move(BaseTool):
             vertices = []
             for edge in face.edges:
                 position = edge.v1.position
-                if edge.v1 is closest.vertex:
+                if edge.v1 in move_vertices:
                     position += face.plane.normal * 100
                 vertices.append(position)
             plane = Plane.from_vertices(vertices)
@@ -138,9 +150,16 @@ class Move(BaseTool):
                         return None
                     break
 
-        self.initial_selection = closest
-        self.initial_selection_guides = list(self.initial_selection.alignment_guides())
+        self.source_position = closest.get_subspace().project_point_inside(ctrl.position)
+        self.move_vertices = [MoveVertex(v, self.source_position) for v in move_vertices]
+        self.initial_selection_guides = (list(closest.alignment_guides()) + 
+                                         list(selection.all_45degree_guides(self.source_position)))
         self.update_display = update_display
         self.subspace = subspace
-        self.original_position = closest.vertex.position
         return ctrl
+
+
+class MoveVertex(object):
+    def __init__(self, vertex, source_position):
+        self.vertex = vertex
+        self.delta = vertex.position - source_position

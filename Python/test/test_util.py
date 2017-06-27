@@ -100,3 +100,16 @@ def test_intersect():
     assert sp.intersect(Line(Vector3(4, 5, 0), Vector3(0, 0, -1))) is sp
     py.test.raises(EmptyIntersection, sp.intersect,
                         Line(Vector3(4, 5.1, 0), Vector3(0, 0, -1)))
+
+def test_shifted():
+    delta = Vector3(4, 5, 6)
+    sp = WholeSpace()
+    assert sp.shifted(delta) is sp
+    pl = Plane(Vector3(0, 1, 0), -4.75).shifted(delta)
+    assert pl.normal == Vector3(0, 1, 0)
+    assert pl.distance == -9.75
+    ln = Line(Vector3(2, 3.1, 4.2), Vector3(1, 0, 0)).shifted(delta)
+    assert ln.from_point == Vector3(6, 8.1, 10.2)
+    assert ln.axis == Vector3(1, 0, 0)
+    sp = SinglePoint(Vector3(1.1, 2.2, 3.3)).shifted(delta)
+    assert sp.position == Vector3(5.1, 7.2, 9.3)

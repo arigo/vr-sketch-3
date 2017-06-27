@@ -25,14 +25,27 @@ def signal_error(etype, value, tb):
     msg = msg.decode(sys.getfilesystemencoding(), "replace")
     _error_callback(msg)
 
+class OutputToConsole:
+    def __init__(self, prefix):
+        self.prefix = unicode(prefix)
+        self.buffer = ""
+    def write(self, buf):
+        import sys
+        for line in buf.splitlines(True):
+            self.buffer += line
+            if self.buffer.endswith('\n'):
+                msg = self.buffer.rstrip().decode(sys.getfilesystemencoding(), "replace")
+                _error_callback(self.prefix + msg)
+                self.buffer = ""
+
 @ffi.def_extern(onerror=signal_error)
 def pyunityvr_init(error_callback, *fns):
+    import os, sys
     global _init_called, _main, _error_callback
     _error_callback = error_callback
     if _init_called:
         # not the first time: kill all modules that live inside
         # the same directory as 'main' or a subdirectory
-        import os, sys
         import main
         for sep in [os.sep, os.altsep]:
             basedir = os.path.dirname(main.__file__) + sep
@@ -48,6 +61,8 @@ def pyunityvr_init(error_callback, *fns):
         ffi_interface.pyunityvr_init(error_callback, *fns)
     else:
         _init_called = "in-progress"
+        sys.stdout = OutputToConsole(prefix="INFO:")
+        sys.stderr = OutputToConsole(prefix="")
         import main
         _main = main.init(ffi, *fns)
         if _main is None:

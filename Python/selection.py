@@ -50,7 +50,7 @@ class SelectPosition(object):
         pass
 
     def alignment_guides(self):
-        return _all_45degree_guides(self.position)
+        return all_45degree_guides(self.position)
 
 
 class SelectVertex(SelectPosition):
@@ -58,8 +58,11 @@ class SelectVertex(SelectPosition):
         SelectPosition.__init__(self, app, vertex.position)
         self.vertex = vertex
 
+    def individual_vertices(self):
+        return [self.vertex]
 
-def _all_45degree_guides(position):
+
+def all_45degree_guides(position):
     for col1, col2, axis in _ALL_45DEGREE_AXES:
         yield col1, col2, Line(position, axis)
     yield 0x00D0D0, 0x00D0D0, Plane.from_point_and_normal(position, Vector3(1, 0, 0))
@@ -118,8 +121,11 @@ class SelectAlongEdge(object):
         if self.fraction == 0.5:
             p = (p1 + p2) * 0.5
             yield 0x00FFFF, 0x00FFFF, Plane.from_point_and_normal(p, (p2 - p1).normalized())
-            for guide in _all_45degree_guides(p):
+            for guide in all_45degree_guides(p):
                 yield guide
+
+    def individual_vertices(self):
+        return [self.edge.v1, self.edge.v2]
 
 
 class SelectOnFace(object):
@@ -144,6 +150,9 @@ class SelectOnFace(object):
     def alignment_guides(self):
         yield 0x00FFFF, 0x80FFFF, self.face.plane
 
+    def individual_vertices(self):
+        return [edge.v1 for edge in self.face.edges]
+
 
 class SelectVoid(object):
     def __init__(self, app, position):
@@ -163,6 +172,9 @@ class SelectVoid(object):
         self.position = pt
 
     def alignment_guides(self):
+        return []
+
+    def individual_vertices(self):
         return []
 
 

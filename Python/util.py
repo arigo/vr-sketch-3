@@ -42,6 +42,12 @@ class Vector3(object):
         if isinstance(inverse_scale, Vector3):
             raise TypeError("can't divide two vectors")
         return self * (1.0 / inverse_scale)
+
+    def __pos__(self):
+        return self
+
+    def __neg__(self):
+        return Vector3(-self.x, -self.y, -self.z)
     
     def __abs__(self):
         return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
@@ -121,6 +127,9 @@ class WholeSpace(AffineSubspace):
     def intersect(self, subspace):
         return subspace
 
+    def shifted(self, delta):
+        return self
+
 
 class Plane(AffineSubspace):
     _SELECTION_DISTANCE = 0.04
@@ -173,6 +182,9 @@ class Plane(AffineSubspace):
             pt = selfpt + f * in_line
             return Line(pt, normal1)
 
+    def shifted(self, delta):
+        return Plane(self.normal, self.distance - self.normal.dot(delta))
+
 
 class Line(AffineSubspace):
     _SELECTION_DISTANCE = 0.044
@@ -216,6 +228,9 @@ class Line(AffineSubspace):
             raise EmptyIntersection
         return SinglePoint(pt)
 
+    def shifted(self, delta):
+        return Line(self.from_point + delta, self.axis)
+
 
 class SinglePoint(AffineSubspace):
     _SELECTION_DISTANCE = 0.05
@@ -231,3 +246,6 @@ class SinglePoint(AffineSubspace):
         if subspace.distance_to_point(self.position) > EPSILON:
             raise EmptyIntersection
         return self
+
+    def shifted(self, delta):
+        return SinglePoint(self.position + delta)
