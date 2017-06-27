@@ -1,11 +1,13 @@
-from app import App
+from app import App, initialize_functions
 from util import Vector3
 from worldobj import *
 from model import *
 
 
-def init(**kwds):
-    app = App(**kwds)
+def init(ffi, *fns):
+    initialize_functions(ffi, *fns)
+
+    app = App()
     #app.display(Polygon([Vector3(0, .5, 0), Vector3(0, 1, 0),
     #                     Vector3(1, 1, 0)]))
     #app.display(ColoredPolygon([Vector3(0, 1, 0), Vector3(1, 1, 0),

@@ -7,7 +7,7 @@ _error_callback = None
 def signal_error(etype, value, tb):
     import os, sys
     import traceback
-    traceback.print_exception(etype, value, tb)
+    #traceback.print_exception(etype, value, tb)
     # report by repeating the exception itself on the first two lines.
     # Unity displays the first two lines in the console, until we
     # click on it and then we see the full traceback.
@@ -19,13 +19,14 @@ def signal_error(etype, value, tb):
         lines.append('%s:%s in %s(): %s\n' % (
             filename, line_number, function_name, text))
     lines += traceback.format_exception_only(etype, value)
+    lines.append('--------------------\n')
     lines += traceback.format_exception(etype, value, tb)
     msg = ''.join(lines)
     msg = msg.decode(sys.getfilesystemencoding(), "replace")
     _error_callback(msg)
 
 @ffi.def_extern(onerror=signal_error)
-def pyunityvr_init(error_callback, fn_update, fn_approx_plane):
+def pyunityvr_init(error_callback, *fns):
     global _init_called, _main, _error_callback
     _error_callback = error_callback
     if _init_called:
@@ -44,15 +45,11 @@ def pyunityvr_init(error_callback, fn_update, fn_approx_plane):
         # Otherwise, we must reset _init_called to False here.
         _init_called = False
         from PyUnityVR import ffi_interface
-        ffi_interface.pyunityvr_init(error_callback, fn_update, fn_approx_plane)
+        ffi_interface.pyunityvr_init(error_callback, *fns)
     else:
         _init_called = "in-progress"
         import main
-        def _approx_plane(coords):
-            result = ffi.new("float[4]")
-            fn_approx_plane(coords, len(coords), result)
-            return result
-        _main = main.init(fn_update=fn_update, fn_approx_plane=_approx_plane)
+        _main = main.init(ffi, *fns)
         if _main is None:
             _main = main
         _init_called = True
@@ -61,4 +58,9 @@ def pyunityvr_init(error_callback, fn_update, fn_approx_plane):
 @ffi.def_extern(onerror=signal_error)
 def pyunityvr_frame(num_controllers, controllers):
     _main.handle_frame(num_controllers, controllers)
+    return 42
+
+@ffi.def_extern(onerror=signal_error)
+def pyunityvr_click(id):
+    _main.handle_click(ffi.string(id))
     return 42

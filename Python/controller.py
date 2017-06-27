@@ -1,11 +1,15 @@
 import worldobj
 from util import Vector3
 
-PRESS_TRIGGER = 1
-PRESS_GRIP    = 2
+PRESS_TRIGGER  = 1
+PRESS_GRIP     = 2
+PRESS_TOUCHPAD = 4
 
 
 class Controller(object):
+
+    def __init__(self, index):
+        self._index = index
 
     def update(self, pos, pressed):
         self.position = pos
@@ -21,14 +25,20 @@ class Controller(object):
     def is_trigger_down(self):
         return self.pressed & PRESS_TRIGGER
 
+    def show_menu(self, items):
+        # _show_menu() is injected into the globals by app.initialize_functions()
+        s = '\n'.join(['%s:%s' % (id, text) for (id, text) in items])
+        _show_menu(self._index, s)
+
 
 class ControllersMgr(object):
-    tool = None
+    TOOLS = ["Rectangle"]
 
     def __init__(self, app):
         self.app = app
         self.controllers = []
-        self.load_tool("Rectangle")
+        self.tool = None
+        self.load_tool(self.TOOLS[0])
 
     def load_tool(self, name):
         module = __import__("tools.%s" % (name.lower(),), None, None, [name])
@@ -36,13 +46,14 @@ class ControllersMgr(object):
         if self.tool is not None:
             self.tool.cancel()
         self.tool = ToolCls(self.app)
+        self.selected_tool = name
 
     def handle_controllers(self, num_controllers, controllers):
         if len(self.controllers) != num_controllers:
             while len(self.controllers) > num_controllers:
                 self.controllers.pop()
             while len(self.controllers) < num_controllers:
-                self.controllers.append(Controller())
+                self.controllers.append(Controller(len(self.controllers)))
 
         for i in range(num_controllers):
             cpos = Vector3(controllers[i * 4],
@@ -53,6 +64,14 @@ class ControllersMgr(object):
 
         self.app.model_scale = controllers[num_controllers * 4]
 
+        # this shows the tool selection menu when we press the touchpad, for now.
+        # Once a menu is active, C# will call this function with num_controllers == 0,
+        # which cancels the tool-specific action, hides cursors, etc.
+        for ctrl in self.controllers:
+            if ctrl.pressed & ~ctrl.prev_pressed & PRESS_TOUCHPAD:
+                ctrl.show_menu(self.get_tools_menu())
+                return
+
         # this just adds a black cylinder between the two controllers when both grips
         # are pressed; the actual logic for the grip button is in C#
         if len(self.controllers) >= 2:
@@ -61,3 +80,10 @@ class ControllersMgr(object):
                     self.controllers[0].position, self.controllers[1].position, color=0x202020))
 
         self.tool.handle_controllers(self.controllers)
+
+    def get_tools_menu(self):
+        for tool_name in self.TOOLS:
+            text = unicode(tool_name)
+            if tool_name == self.selected_tool:
+                text = u"\u2714 " + text
+            yield ('tool_' + tool_name, text)

@@ -17,7 +17,10 @@ class Rectangle(object):
 
     def cancel(self):
         if self.clicking_gen is not None:
-            self.clicking_gen.throw(GeneratorExit)
+            try:
+                self.clicking_gen.throw(GeneratorExit)
+            except GeneratorExit:
+                pass
             self.clicking_gen = None
 
     def other_ctrl(self, controllers):

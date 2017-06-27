@@ -6,8 +6,10 @@ ffibuilder = cffi.FFI()
 ffibuilder.embedding_api("""
     int pyunityvr_init(void (*__stdcall signal_error)(wchar_t *),
                        void (*__stdcall update)(int, int, float[], int),
-                       void (*__stdcall approx_plane)(float[], int, float[]));
+                       void (*__stdcall approx_plane)(float[], int, float[]),
+                       void (*__stdcall show_menu)(int, wchar_t *));
     int pyunityvr_frame(int num_controllers, float controllers[]);
+    int pyunityvr_click(wchar_t *id);
 """)
 
 ffibuilder.set_source("PyUnityVR_cffi", "")

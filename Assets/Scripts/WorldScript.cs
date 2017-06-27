@@ -26,13 +26,18 @@ public class WorldScript : MonoBehaviour
     public delegate void ApproxPlaneDelegate(
         [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] float[] points, int coord_count,
         [Out, MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] float[] plane);
+    public delegate void ShowMenuDelegate(int controller_num,
+        [In, MarshalAs(UnmanagedType.LPWStr)] string menu);
 
     [DllImport("PyUnityVR_cffi", CharSet = CharSet.Unicode)]
     public static extern int pyunityvr_init(SignalErrorDelegate error, UpdateDelegate update,
-                                            ApproxPlaneDelegate approx_plane);
+                                            ApproxPlaneDelegate approx_plane, ShowMenuDelegate show_menu);
     
     [DllImport("PyUnityVR_cffi")]
     public static extern int pyunityvr_frame(int num_ctrls, [In, MarshalAs(UnmanagedType.LPArray)] float[] controllers);
+
+    [DllImport("PyUnityVR_cffi")]
+    public static extern int pyunityvr_click([In, MarshalAs(UnmanagedType.LPWStr)] string id);
 
 
     /***************************************************************************************************/
@@ -42,6 +47,9 @@ public class WorldScript : MonoBehaviour
     SignalErrorDelegate keepalive_error;
     UpdateDelegate keepalive_update;
     ApproxPlaneDelegate keepalive_approx_plane;
+    ShowMenuDelegate keepalive_show_menu;
+    Controller[] active_controllers;
+    GameObject current_dialog;
 
     static void CB_SignalError(string error)
     {
@@ -93,6 +101,24 @@ public class WorldScript : MonoBehaviour
         plane[3] = result.distance;
     }
 
+    void CB_ShowMenu(int controller_num, string menu_string)
+    {
+        var menu = new Menu();
+        foreach (var line in menu_string.Split('\n'))
+        {
+            int colon = line.IndexOf(':');
+            menu.Add(line.Substring(colon + 1), () => {
+                if (pyunityvr_click(line.Substring(0, colon)) != 42)
+                    Debug.LogError("pyunityvr_click() failed!");
+            });
+        }
+        var dialog = menu.MakePopup(active_controllers[controller_num], gameObject);
+        if (dialog == null)
+            current_dialog = null;
+        else
+            current_dialog = dialog.gameObject;
+    }
+
     private void Start()
     {
         world_prefabs = new Dictionary<Kind, WorldObject>();
@@ -124,8 +150,9 @@ public class WorldScript : MonoBehaviour
         keepalive_error = CB_SignalError;
         keepalive_update = CB_Update;
         keepalive_approx_plane = CB_ApproxPlane;
+        keepalive_show_menu = CB_ShowMenu;
 
-        if (pyunityvr_init(keepalive_error, keepalive_update, keepalive_approx_plane) != 42)
+        if (pyunityvr_init(keepalive_error, keepalive_update, keepalive_approx_plane, keepalive_show_menu) != 42)
             Debug.LogError("pyunityvr_init() failed!");
 
         var gt = Controller.GlobalTracker(this);
@@ -140,17 +167,22 @@ public class WorldScript : MonoBehaviour
 
     private void Gt_onControllersUpdate(Controller[] controllers)
     {
+        active_controllers = controllers;
+
         int j = controllers.Length * 4;
+        if (current_dialog)
+            j = 0;
+
         var data = new float[j + 1];
         data[j] = transform.localScale.y;
 
-        for (int i = 0; i < controllers.Length; i++)
+        for (int o = 0; o < j; o += 4)
         {
-            Controller ctrl = controllers[i];
-            int o = 4 * i;
+            Controller ctrl = controllers[o / 4];
             int pressed = 0;
             if (ctrl.triggerPressed) pressed |= 1;
             if (ctrl.gripPressed) pressed |= 2;
+            if (ctrl.touchpadPressed) pressed |= 4;
 
             Vector3 pos = transform.InverseTransformPoint(ctrl.position);
             data[o + 0] = pos.x;
@@ -158,7 +190,7 @@ public class WorldScript : MonoBehaviour
             data[o + 2] = pos.y;
             data[o + 3] = pressed;
         }
-        if (pyunityvr_frame(controllers.Length, data) != 42)
+        if (pyunityvr_frame(j / 4, data) != 42)
             Debug.LogError("pyunityvr_frame() failed!");
     }
 

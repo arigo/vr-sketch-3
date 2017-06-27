@@ -133,7 +133,7 @@ class Plane(AffineSubspace):
 
     @staticmethod
     def from_vertices(vertices):
-        # _approx_plane() is injected in this module's globals by App.__init__()
+        # _approx_plane() is injected in this module's globals by app.initialize_functions()
         lst = []
         for v in vertices:
             lst += v.tolist()
