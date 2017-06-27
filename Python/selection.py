@@ -17,6 +17,7 @@ class SelectedColorScheme:
     EDGE   = 0xD00000
     VOID   = 0xA00000
     FACE   = 0xFF40FF
+    EDGE_AXIS = {'x': 0xD00000, 'y': 0x00D000, 'z': 0x0000D0}
 
 class TargetColorScheme:
     VERTEX = 0x80FF80
@@ -25,25 +26,31 @@ class TargetColorScheme:
     FACE   = 0x80FF80
 
 
-class SelectVertex(object):
-    def __init__(self, app, vertex):
+class SelectPosition(object):
+    def __init__(self, app, position):
         self.app = app
-        self.vertex = vertex
+        self.position = position
 
     def flash(self, color_scheme):
-        self.app.flash(SmallSphere(self.vertex.position, color_scheme.VERTEX))
+        self.app.flash(SmallSphere(self.position, color_scheme.VERTEX))
 
     def get_point(self):
-        return self.vertex.position
+        return self.position
 
     def get_subspace(self):
-        return SinglePoint(self.vertex.position)
+        return SinglePoint(self.position)
 
     def adjust(self, pt):
         pass
 
     def alignment_guides(self):
-        return _all_45degree_guides(self.vertex.position)
+        return _all_45degree_guides(self.position)
+
+
+class SelectVertex(SelectPosition):
+    def __init__(self, app, vertex):
+        SelectPosition.__init__(self, app, vertex.position)
+        self.vertex = vertex
 
 
 def _all_45degree_guides(position):

@@ -1,5 +1,5 @@
 from worldobj import ColoredPolygon, RectanglePointer, Cylinder, CrossPointer, DashedStem
-from util import Vector3, WholeSpace, EmptyIntersection, Plane
+from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint
 from model import EPSILON
 import selection
 
@@ -62,8 +62,8 @@ class Rectangle(object):
                 closest = selection.find_closest(self.app, self.follow_ctrl.position)
 
                 # Start computing the affine subspace for alignments
-                subspace = WholeSpace()
-                if isinstance(closest, selection.SelectVoid):
+                subspace = closest.get_subspace()
+                if isinstance(subspace, WholeSpace):
                     p1 = self.initial_selection.get_point()
                     diff = closest.get_point() - p1
                     snap = diff.closest_axis_plane(selection.DISTANCE_VERTEX_MIN)
@@ -75,6 +75,9 @@ class Rectangle(object):
                 ctrl = self.other_ctrl(controllers)
                 if ctrl is not None:
                     closest2 = selection.find_closest(self.app, ctrl.position)
+                    if not isinstance(closest2.get_subspace(), SinglePoint):
+                        if abs(ctrl.position - self.initial_selection.get_point()) < selection.DISTANCE_VERTEX_MIN:
+                            closest2 = selection.SelectPosition(self.app, self.initial_selection.get_point())
                     self.app.flash(CrossPointer(closest2.get_point()))
 
                     # Get the "guides" from the other controller's selection, which are
@@ -127,6 +130,7 @@ class Rectangle(object):
                 p4 = p3.withcoord(self.fixed_direction, getattr(p1, self.fixed_direction))
                 self.rectangle = [p1, p2, p3, p4]
 
+                #self.app.flash(Cylinder(p1, p2, selection.SelectedColorScheme.EDGE_AXIS[self.fixed_direction]))
                 self.app.flash(Cylinder(p1, p2, selection.SelectedColorScheme.EDGE))
                 self.app.flash(ColoredPolygon(self.rectangle, selection.TargetColorScheme.FACE))
                 
@@ -137,9 +141,11 @@ class Rectangle(object):
         # and then move the controller without holding down the trigger.
 
         app = self.app
+        start_time = app.current_time
         follow_ctrl = self.follow_ctrl
         while follow_ctrl.is_trigger_down():
-            if abs(initial_ctrl_position - follow_ctrl.position) > app.scale_ctrl(DISTANCE_MOVEMENT_MIN):
+            if (abs(initial_ctrl_position - follow_ctrl.position) > app.scale_ctrl(DISTANCE_MOVEMENT_MIN)
+                and app.current_time - start_time > 0.4):
                 # we moved far enough and the trigger is still down.  Switch to a mode where we
                 # follow as long as the trigger is down, and stop when it is released.
                 while follow_ctrl.is_trigger_down():

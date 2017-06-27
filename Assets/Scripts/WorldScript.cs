@@ -173,8 +173,9 @@ public class WorldScript : MonoBehaviour
         if (current_dialog)
             j = 0;
 
-        var data = new float[j + 1];
+        var data = new float[j + 2];
         data[j] = transform.localScale.y;
+        data[j + 1] = Time.time;
 
         for (int o = 0; o < j; o += 4)
         {
