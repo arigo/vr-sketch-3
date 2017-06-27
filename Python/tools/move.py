@@ -25,9 +25,10 @@ class Move(BaseTool):
         self.move_vertex_to(self.original_position)
 
     def handle_drag(self, follow_ctrl, other_ctrl=None):
+        self.handle_cancel()
+
         # Compute the target "selection" object from what we hover over
-        closest = selection.find_closest(self.app, follow_ctrl.position,
-                                            ignore = self.initial_selection.vertex)
+        closest = selection.find_closest(self.app, follow_ctrl.position)
 
         # Must be within the allowed subspace
         subspace = self.subspace
@@ -35,9 +36,6 @@ class Move(BaseTool):
             subspace = subspace.intersect(closest.get_subspace())
         except EmptyIntersection:
             closest = selection.SelectVoid(closest.get_point())
-
-        # Shift the target position to the alignment subspace
-        closest.adjust(subspace.project_point_inside(closest.get_point()))
 
         # Try to match the initial_selection's guides
         original_stem_color = (0x202020,)
@@ -86,7 +84,7 @@ class Move(BaseTool):
                 else:
                     selection_guide = closest2
 
-        # Shift again the target position to the alignment subspace
+        # Shift the target position to the alignment subspace
         closest.adjust(subspace.project_point_inside(closest.get_point()))
 
         # Draw a dashed line from the initial to the final point
