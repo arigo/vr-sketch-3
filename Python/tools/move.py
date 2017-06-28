@@ -1,6 +1,6 @@
 from worldobj import MovePointer, DashedStem, CrossPointer
 from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint
-from model import EPSILON
+from model import EPSILON, UndoMove
 import selection
 from .base import BaseTool
 
@@ -22,7 +22,10 @@ class Move(BaseTool):
         return None
 
     def handle_cancel(self):
-        self.move_vertex_to(self.source_position)
+        self.undo.undo(self.app, self.app.model)
+
+    def handle_accept(self):
+        self.app.record_undoable_action(self.undo)
 
     def handle_drag(self, follow_ctrl, other_ctrl=None):
         self.handle_cancel()
@@ -101,14 +104,9 @@ class Move(BaseTool):
             self.app.flash(make_dashed_stem())
 
         # Actually move the vertex
-        self.move_vertex_to(closest.get_point())
-
-
-    def move_vertex_to(self, position):
         for mv in self.move_vertices:
-            mv.vertex.position = position + mv.delta
-        for upd in self.update_display:
-            self.app.display(upd)
+            mv.vertex.position = closest.get_point() + mv.delta
+        self.undo.refresh(self.app, self.app.model)
 
 
     def start_movement(self, ctrl, closest):
@@ -119,7 +117,6 @@ class Move(BaseTool):
         # compute the subspace inside which it's ok to move: we must not make any 
         # existing face non-planar
         subspace = WholeSpace()
-        update_display = []
 
         for face in self.app.model.faces:
             for edge in face.edges:
@@ -127,9 +124,6 @@ class Move(BaseTool):
                     break
             else:
                 continue     # none of the move_vertices belong to this face
-
-            update_display.append(face)
-            update_display.extend(face.edges)
 
             # check if we move that point completely off the current face's plane,
             # would the place stay planar?
@@ -151,10 +145,10 @@ class Move(BaseTool):
                     break
 
         self.source_position = closest.get_subspace().project_point_inside(ctrl.position)
+        self.undo = UndoMove(move_vertices)
         self.move_vertices = [MoveVertex(v, self.source_position) for v in move_vertices]
         self.initial_selection_guides = (list(closest.alignment_guides()) + 
                                          list(selection.all_45degree_guides(self.source_position)))
-        self.update_display = update_display
         self.subspace = subspace
         return ctrl
 

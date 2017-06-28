@@ -37,9 +37,9 @@ class Face(worldobj.WorldObject):
 
     def __init__(self, edges):
         self.edges = edges
-        self.updated()
+        self.update_plane()
 
-    def updated(self):
+    def update_plane(self):
         # check invariants
         edges = self.edges
         for i in range(len(edges)):
@@ -103,20 +103,80 @@ class Model(object):
                 return v
         return Vertex(position)
 
-    def new_edge(self, app, v1, v2):
+    def _new_or_existing_edge(self, v1, v2, create_list):
         for edge in self.edges:
             if edge.v1 is v1 and edge.v2 is v2:
                 return edge
-        e = Edge(v1, v2)
-        app.add_edge(e)
-        return e
+        edge = Edge(v1, v2)
+        self.edges.append(edge)
+        create_list.append(edge)
+        return edge
 
-    def new_face(self, app, edges):
-        f = Face(edges)
-        app.add_face(f)
-        return f
+    def _new_face(self, edges, create_list):
+        face = Face(edges)
+        self.faces.append(face)
+        create_list.append(face)
+        return face
 
-    def new_face_from_vertices(self, app, vertices):
-        v_list = [self.new_vertex(position) for position in vertices]
-        e_list = [self.new_edge(app, v_list[i - 1], v_list[i]) for i in range(len(v_list))]
-        return self.new_face(app, e_list)
+
+class UndoRectangle(object):
+    name = 'Rectangle'
+
+    def __init__(self, positions):
+        self.positions = positions
+
+    def redo(self, app, model):
+        v_list = [model.new_vertex(position) for position in self.positions]
+        self.create_list = []
+        e_list = []
+        for i in range(len(v_list)):
+            e_list.append(model._new_or_existing_edge(v_list[i - 1], v_list[i], self.create_list))
+        model._new_face(e_list, self.create_list)
+        for x in self.create_list:
+            app.display(x)
+
+    def undo(self, app, model):
+        for x in self.create_list:
+            if isinstance(x, Edge):
+                model.edges.remove(x)
+            else:
+                model.faces.remove(x)
+            app.destroy(x)
+        del self.create_list
+
+
+class UndoMove(object):
+    
+    def __init__(self, vertices):
+        self.v2positions = {}
+        for v in vertices:
+            self.v2positions[v] = v.position
+        if len(self.v2positions) == 1:
+            self.name = 'Move vertex'
+        else:
+            self.name = 'Move %d vertices' % (len(self.v2positions),)
+
+    def undo(self, app, model):
+        self.v2positions_after = {}
+        for vertex in self.v2positions.keys():
+            self.v2positions_after[vertex] = vertex.position
+        self.update_to(self.v2positions, app, model)
+
+    def redo(self, app, model):
+        self.update_to(self.v2positions_after, app, model)
+
+    def update_to(self, new_v2positions, app, model):
+        for vertex in new_v2positions.keys():
+            vertex.position = new_v2positions[vertex]
+        self.refresh(app, model)
+
+    def refresh(self, app, model):
+        for edge in model.edges:
+            if edge.v1 in self.v2positions or edge.v2 in self.v2positions:
+                app.display(edge)
+        for face in model.faces:
+            for e in face.edges:
+                if e.v1 in self.v2positions:
+                    face.update_plane()
+                    app.display(face)
+                    break

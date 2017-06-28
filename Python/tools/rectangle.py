@@ -1,6 +1,6 @@
 from worldobj import ColoredPolygon, RectanglePointer, Cylinder, CrossPointer, DashedStem
 from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint
-from model import EPSILON
+from model import EPSILON, UndoRectangle
 import selection
 from .base import BaseTool
 
@@ -29,7 +29,9 @@ class Rectangle(BaseTool):
 
     def handle_accept(self):
         if self.rectangle:
-            self.app.model.new_face_from_vertices(self.app, self.rectangle)
+            action = UndoRectangle(self.rectangle)
+            action.redo(self.app, self.app.model)
+            self.app.record_undoable_action(action)
 
     def handle_drag(self, follow_ctrl, other_ctrl=None):
         # Compute the target "selection" object from what we hover over

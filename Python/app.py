@@ -17,6 +17,8 @@ class App(object):
         self.num_world_objs = 0
         self.model = model.Model()
         self.ctrlmgr = controller.ControllersMgr(self)
+        self.undoable_actions = []
+        self.undone_counter = 0
 
     def display(self, worldobj):
         if worldobj not in self.pending_updates_seen:
@@ -89,7 +91,36 @@ class App(object):
         if id.startswith("tool_"):
             self.ctrlmgr.load_tool(id[5:])
         else:
-            raise ValueError(id)
+            getattr(self, '_handle_click_' + id)()
+
+
+    def record_undoable_action(self, undoable_action):
+        while self.undone_counter > 0:
+            self.undoable_actions.pop()
+            self.undone_counter -= 1
+        self.undoable_actions.append(undoable_action)
+
+    def next_undoable_action(self):
+        if self.undone_counter < len(self.undoable_actions):
+            return self.undoable_actions[-self.undone_counter - 1]
+        return None
+
+    def next_redoable_action(self):
+        if self.undone_counter > 0:
+            return self.undoable_actions[-self.undone_counter]
+        return None
+
+    def _handle_click_undo(self):
+        action = self.next_undoable_action()
+        if action is not None:
+            action.undo(self, self.model)
+            self.undone_counter += 1
+
+    def _handle_click_redo(self):
+        action = self.next_redoable_action()
+        if action is not None:
+            action.redo(self, self.model)
+            self.undone_counter -= 1
 
 
 def initialize_functions(ffi, _fn_update, _fn_approx_plane, _fn_show_menu):
