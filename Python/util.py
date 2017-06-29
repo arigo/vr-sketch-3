@@ -53,11 +53,15 @@ class Vector3(object):
         return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
 
     def __eq__(self, other):
+        if self is other:
+            return True
         if not isinstance(other, Vector3):
             return NotImplemented
         return abs(self - other) < EPSILON
 
     def __ne__(self, other):
+        if self is other:
+            return False
         if not isinstance(other, Vector3):
             return NotImplemented
         return abs(self - other) >= EPSILON
@@ -108,7 +112,7 @@ class AffineSubspace(object):
         # where 'family' is the dimensionality.  This allows results to be ordered.
         d = app.scale_ctrl(self.distance_to_point(pt)) / self._SELECTION_DISTANCE
         return (self._DIMENSIONALITY, d)
-            
+
 
 class EmptyIntersection(Exception):
     pass

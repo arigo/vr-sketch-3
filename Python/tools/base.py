@@ -42,6 +42,7 @@ class BaseTool(object):
         return None
 
     def handle_controllers(self, controllers):
+        self._all_controllers = controllers
         if self._clicking_gen is None:
             ctrl = self.handle_hover(controllers)
             if ctrl is not None:
@@ -81,6 +82,12 @@ class BaseTool(object):
             yield
         else:
             # we released the trigger before moving the controller away.  Switch to a mode where
-            # we wait for the next trigger-press to stop.
-            while not follow_ctrl.is_trigger_down():
+            # we wait for the next trigger-press to stop.  We accept trigger-presses from the
+            # other controller, too.
+            while True:
                 yield
+                if follow_ctrl not in self._all_controllers:
+                    return
+                for ctrl in self._all_controllers:
+                    if ctrl.is_trigger_down():
+                        return

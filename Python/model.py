@@ -2,23 +2,15 @@ from util import Vector3, Plane, EPSILON
 import worldobj
 
 
-class Vertex(object):
-    
-    def __init__(self, position):
-        self.position = position
-
-
-class Edge(worldobj.WorldObject):
-    _kind = worldobj.Stem._kind
-
+class Edge(object):
     def __init__(self, v1, v2):
         self.v1 = v1
         self.v2 = v2
 
     def measure_distance(self, position):
         # returns (fraction along the edge, distance)
-        v1 = self.v1.position
-        v2 = self.v2.position
+        v1 = self.v1
+        v2 = self.v2
         p1 = v2 - v1
         p2 = position - v1
         dot = p1.dot(p2)
@@ -26,26 +18,19 @@ class Edge(worldobj.WorldObject):
         frac = dot / length2 if length2 else 0.0
         return frac, abs(p2 - p1 * frac)
 
-    def getrawdata(self):
-        lst = self.v1.position.tolist() + self.v2.position.tolist()
-        lst.append(0x101010)   # very dark
-        return lst
 
-
-class Face(worldobj.WorldObject):
-    _kind = worldobj.Polygon._kind
-
+class Face(object):
     def __init__(self, edges):
         self.edges = edges
-        self.update_plane()
+        self._update_plane()
 
-    def update_plane(self):
+    def _update_plane(self):
         # check invariants
         edges = self.edges
         for i in range(len(edges)):
-            assert edges[i-1].v2 is edges[i].v1
+            assert edges[i-1].v2 == edges[i].v1
         # compute the plane that is the best approximation of all vertices
-        self.plane = Plane.from_vertices([edge.v1.position for edge in self.edges])
+        self.plane = Plane.from_vertices([edge.v1 for edge in self.edges])
 
         normal = self.plane.normal
         if abs(normal.y) < max(abs(normal.x), abs(normal.z)):
@@ -61,7 +46,7 @@ class Face(worldobj.WorldObject):
     def point_is_inside(self, point):
         # NB. the face should be quasi-planar, but not necessarily convex
         pt = self._project_point_on_plane(point)
-        uvs = [self._project_point_on_plane(edge.v1.position) for edge in self.edges]
+        uvs = [self._project_point_on_plane(edge.v1) for edge in self.edges]
         uv2 = uvs[0]
         side = 0
         for i in range(len(uvs) - 1, -1, -1):
@@ -72,18 +57,6 @@ class Face(worldobj.WorldObject):
                     side += -1 if uv1[1] < uv2[1] else 1
             uv2 = uv1
         return side != 0
-
-    def find_vertex(self, vertex):
-        for i, edge in enumerate(self.edges):
-            if edge.v1 is vertex:
-                return i
-        return -1
-
-    def getrawdata(self):
-        lst = []
-        for edge in self.edges:
-            lst += edge.v1.position.tolist()
-        return lst
 
 
 class Model(object):
@@ -97,86 +70,62 @@ class Model(object):
             yield edge.v1
             yield edge.v2
 
-    def new_vertex(self, position):
-        for v in self.all_vertices():
-            if abs(v.position - position) < EPSILON:
-                return v
-        return Vertex(position)
 
-    def _new_or_existing_edge(self, v1, v2, create_list):
-        for edge in self.edges:
-            if edge.v1 is v1 and edge.v2 is v2:
+class ModelStep(object):
+
+    def __init__(self, model, name):
+        self.model = model
+        self.name = name
+        self.fe_remove = set()
+        self.fe_add = []
+
+    def apply(self, app):
+        for edge_or_face in self.fe_remove:
+            app._remove_edge_or_face(edge_or_face)
+        for edge_or_face in self.fe_add:
+            app._add_edge_or_face(edge_or_face)
+
+        fe_remove = self.fe_remove
+        self.model.edges = [edge for edge in self.model.edges if edge not in fe_remove]
+        self.model.faces = [face for face in self.model.faces if face not in fe_remove]
+        for edge_or_face in self.fe_add:
+            if isinstance(edge_or_face, Edge):
+                self.model.edges.append(edge_or_face)
+            elif isinstance(edge_or_face, Face):
+                self.model.faces.append(edge_or_face)
+            else:
+                raise AssertionError
+
+    def reversed(self):
+        ms = ModelStep(self.model, self.name)
+        ms.fe_remove.update(self.fe_add)
+        ms.fe_add.extend(self.fe_remove)
+        return ms
+
+    def add_edge(self, v1, v2):
+        for edge in self.model.edges:
+            if edge.v1 == v1 and edge.v2 == v2 and edge not in self.fe_remove:
+                return edge
+        for edge in self.fe_add:
+            if isinstance(edge, Edge) and edge.v1 == v1 and edge.v2 == v2:
                 return edge
         edge = Edge(v1, v2)
-        self.edges.append(edge)
-        create_list.append(edge)
+        self.fe_add.append(edge)
         return edge
 
-    def _new_face(self, edges, create_list):
+    def add_face(self, edges):
         face = Face(edges)
-        self.faces.append(face)
-        create_list.append(face)
+        self.fe_add.append(face)
         return face
 
-
-class UndoRectangle(object):
-    name = 'Rectangle'
-
-    def __init__(self, positions):
-        self.positions = positions
-
-    def redo(self, app, model):
-        v_list = [model.new_vertex(position) for position in self.positions]
-        self.create_list = []
-        e_list = []
-        for i in range(len(v_list)):
-            e_list.append(model._new_or_existing_edge(v_list[i - 1], v_list[i], self.create_list))
-        model._new_face(e_list, self.create_list)
-        for x in self.create_list:
-            app.display(x)
-
-    def undo(self, app, model):
-        for x in self.create_list:
-            if isinstance(x, Edge):
-                model.edges.remove(x)
-            else:
-                model.faces.remove(x)
-            app.destroy(x)
-        del self.create_list
-
-
-class UndoMove(object):
-    
-    def __init__(self, vertices):
-        self.v2positions = {}
-        for v in vertices:
-            self.v2positions[v] = v.position
-        if len(self.v2positions) == 1:
-            self.name = 'Move vertex'
-        else:
-            self.name = 'Move %d vertices' % (len(self.v2positions),)
-
-    def undo(self, app, model):
-        self.v2positions_after = {}
-        for vertex in self.v2positions.keys():
-            self.v2positions_after[vertex] = vertex.position
-        self.update_to(self.v2positions, app, model)
-
-    def redo(self, app, model):
-        self.update_to(self.v2positions_after, app, model)
-
-    def update_to(self, new_v2positions, app, model):
-        for vertex in new_v2positions.keys():
-            vertex.position = new_v2positions[vertex]
-        self.refresh(app, model)
-
-    def refresh(self, app, model):
-        for edge in model.edges:
-            if edge.v1 in self.v2positions or edge.v2 in self.v2positions:
-                app.display(edge)
-        for face in model.faces:
-            for e in face.edges:
-                if e.v1 in self.v2positions:
-                    face.update_plane()
-                    app.display(face)
-                    break
+    def move_vertices(self, old2new, move_edges, move_faces):
+        self.fe_remove.update(move_edges)
+        self.fe_remove.update(move_faces)
+        edges_old2new = {}
+        for edge in move_edges:
+            v1 = old2new.get(edge.v1, edge.v1)
+            v2 = old2new.get(edge.v2, edge.v2)
+            edges_old2new[edge] = self.add_edge(v1, v2)
+        for face in move_faces:
+            edges = [edges_old2new.get(edge, edge) for edge in face.edges]
+            self.add_face(edges)

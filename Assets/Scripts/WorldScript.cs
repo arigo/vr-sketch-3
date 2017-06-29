@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using BaroqueUI;
-using System;
+
 
 public class WorldScript : MonoBehaviour
 {
@@ -49,7 +49,7 @@ public class WorldScript : MonoBehaviour
     UpdateDelegate keepalive_update;
     ApproxPlaneDelegate keepalive_approx_plane;
     ShowMenuDelegate keepalive_show_menu;
-    Controller[] active_controllers;
+    List<Controller> active_controllers;
     GameObject current_dialog;
 
     static void CB_SignalError(string error)
@@ -176,11 +176,29 @@ public class WorldScript : MonoBehaviour
         Gt_onControllersUpdate(new Controller[0]);
     }
 
+    void UpdateActiveControllers(Controller[] controllers)
+    {
+        /* 'active_controllers = controllers' but trying to keep the order: even a new
+         * controller shows up before an existing one in the 'controllers' array,
+         * then it will be added after the existing entry in 'active_controllers'.
+         */
+        if (active_controllers == null)
+            active_controllers = new List<Controller>();
+        var ctrls = new HashSet<Controller>(controllers);
+        int i = 0;
+        while (i < active_controllers.Count)
+            if (ctrls.Remove(active_controllers[i]))
+                i++;
+            else
+                active_controllers.RemoveAt(i);
+        active_controllers.AddRange(ctrls);
+    }
+
     private void Gt_onControllersUpdate(Controller[] controllers)
     {
-        active_controllers = controllers;
+        UpdateActiveControllers(controllers);
 
-        int j = controllers.Length * 4;
+        int j = active_controllers.Count * 4;
         if (current_dialog)
             j = 0;
 
@@ -190,7 +208,7 @@ public class WorldScript : MonoBehaviour
 
         for (int o = 0; o < j; o += 4)
         {
-            Controller ctrl = controllers[o / 4];
+            Controller ctrl = active_controllers[o / 4];
             int pressed = 0;
             if (ctrl.triggerPressed) pressed |= 1;
             if (ctrl.gripPressed) pressed |= 2;

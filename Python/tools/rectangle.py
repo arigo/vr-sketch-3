@@ -1,6 +1,6 @@
 from worldobj import ColoredPolygon, RectanglePointer, Cylinder, CrossPointer, DashedStem
 from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint
-from model import EPSILON, UndoRectangle
+from model import EPSILON, ModelStep
 import selection
 from .base import BaseTool
 
@@ -29,9 +29,12 @@ class Rectangle(BaseTool):
 
     def handle_accept(self):
         if self.rectangle:
-            action = UndoRectangle(self.rectangle)
-            action.redo(self.app, self.app.model)
-            self.app.record_undoable_action(action)
+            step = ModelStep(self.app.model, "Rectangle")
+            e_list = []
+            for i in range(len(self.rectangle)):
+                e_list.append(step.add_edge(self.rectangle[i - 1], self.rectangle[i]))
+            step.add_face(e_list)
+            self.app.execute_step(step)
 
     def handle_drag(self, follow_ctrl, other_ctrl=None):
         # Compute the target "selection" object from what we hover over
@@ -52,7 +55,7 @@ class Rectangle(BaseTool):
             closest2 = selection.find_closest(self.app, other_ctrl.position)
             if not isinstance(closest2.get_subspace(), SinglePoint):
                 if abs(other_ctrl.position - self.initial_selection.get_point()) < selection.DISTANCE_VERTEX_MIN:
-                    closest2 = selection.SelectPosition(self.app, self.initial_selection.get_point())
+                    closest2 = selection.SelectVertex(self.app, self.initial_selection.get_point())
             self.app.flash(CrossPointer(closest2.get_point()))
 
             # Get the "guides" from the other controller's selection, which are

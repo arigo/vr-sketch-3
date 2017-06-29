@@ -1,5 +1,5 @@
 from PyUnityVR_cffi import ffi
-import util, model, controller
+import util, model, controller, worldobj
 from util import Vector3
 
 
@@ -16,9 +16,10 @@ class App(object):
         self.destroy_later = []
         self.num_world_objs = 0
         self.model = model.Model()
+        self.model2worldobj = {}
         self.ctrlmgr = controller.ControllersMgr(self)
         self.undoable_actions = []
-        self.undone_counter = 0
+        self.redoable_actions = []
 
     def display(self, worldobj):
         if worldobj not in self.pending_updates_seen:
@@ -38,13 +39,23 @@ class App(object):
                 worldobj._index = None
                 self.pending_removes.setdefault(kind, []).append(index)
 
-    def add_edge(self, edge):
-        self.model.edges.append(edge)
-        self.display(edge)
+    def _add_edge_or_face(self, edge_or_face):
+        if isinstance(edge_or_face, model.Edge):
+            wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2, 0x101010)   # very dark
+        elif isinstance(edge_or_face, model.Face):
+            wo = worldobj.Polygon([edge.v1 for edge in edge_or_face.edges])
+        else:
+            raise AssertionError(repr(edge_or_face))
+        self.model2worldobj[edge_or_face] = wo
+        self.display(wo)
 
-    def add_face(self, face):
-        self.model.faces.append(face)
-        self.display(face)
+    def _remove_edge_or_face(self, edge_or_face):
+        wo = self.model2worldobj.pop(edge_or_face)
+        self.destroy(wo)
+
+    def execute_step(self, model_step):
+        model_step.apply(self)
+        self.record_undoable_action(model_step.reversed())
 
     def scale_ctrl(self, distance):
         return distance / self.model_scale
@@ -95,32 +106,20 @@ class App(object):
 
 
     def record_undoable_action(self, undoable_action):
-        while self.undone_counter > 0:
-            self.undoable_actions.pop()
-            self.undone_counter -= 1
+        del self.redoable_actions[:]
         self.undoable_actions.append(undoable_action)
 
-    def next_undoable_action(self):
-        if self.undone_counter < len(self.undoable_actions):
-            return self.undoable_actions[-self.undone_counter - 1]
-        return None
-
-    def next_redoable_action(self):
-        if self.undone_counter > 0:
-            return self.undoable_actions[-self.undone_counter]
-        return None
-
     def _handle_click_undo(self):
-        action = self.next_undoable_action()
-        if action is not None:
-            action.undo(self, self.model)
-            self.undone_counter += 1
+        if self.undoable_actions:
+            self.undoable_actions[-1].apply(self)
+            action = self.undoable_actions.pop()
+            self.redoable_actions.append(action.reversed())
 
     def _handle_click_redo(self):
-        action = self.next_redoable_action()
-        if action is not None:
-            action.redo(self, self.model)
-            self.undone_counter -= 1
+        if self.redoable_actions:
+            self.redoable_actions[-1].apply(self)
+            action = self.redoable_actions.pop()
+            self.undoable_actions.append(action.reversed())
 
 
 def initialize_functions(ffi, _fn_update, _fn_approx_plane, _fn_show_menu):

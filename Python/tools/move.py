@@ -1,6 +1,6 @@
 from worldobj import MovePointer, DashedStem, CrossPointer
 from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint
-from model import EPSILON, UndoMove
+from model import EPSILON, ModelStep
 import selection
 from .base import BaseTool
 
@@ -22,16 +22,18 @@ class Move(BaseTool):
         return None
 
     def handle_cancel(self):
-        self.undo.undo(self.app, self.app.model)
+        self.model_step.reversed().apply(self.app)
 
     def handle_accept(self):
-        self.app.record_undoable_action(self.undo)
+        self.app.record_undoable_action(self.model_step.reversed())
 
     def handle_drag(self, follow_ctrl, other_ctrl=None):
         self.handle_cancel()
 
-        # Compute the target "selection" object from what we hover over
-        closest = selection.find_closest(self.app, follow_ctrl.position)
+        # Compute the target "selection" object from what we hover over,
+        # ignoring the original 'move_vertices'
+        closest = selection.find_closest(self.app, follow_ctrl.position,
+                                         ignore=self.move_vertices)
 
         # Must be within the allowed subspace
         subspace = self.subspace
@@ -49,16 +51,20 @@ class Move(BaseTool):
             if guide_distance[1] > 1.0:
                 continue
             if guide_distance < best_guide_distance:
-                best_guide_distance = guide_distance
-                best_guide = guide
-                selection_guide_colors = col1, col2
+                try:
+                    try_subspace = subspace.intersect(guide)
+                except EmptyIntersection:
+                    pass
+                else:
+                    if isinstance(try_subspace, SinglePoint) and try_subspace.position == self.source_position:
+                        continue
+                    best_guide_distance = guide_distance
+                    best_guide = guide
+                    best_subspace = try_subspace
+                    selection_guide_colors = col1, col2
         if best_guide is not None:
-            try:
-                subspace = subspace.intersect(best_guide)
-            except EmptyIntersection:
-                pass
-            else:
-                original_stem_color = selection_guide_colors
+            subspace = best_subspace
+            original_stem_color = selection_guide_colors
 
         # Factor in the other controller's position
         # XXX this part is almost a duplicate of the corresponding part from 'rectangle.py'
@@ -71,10 +77,11 @@ class Move(BaseTool):
             # affine subspaces, and find if one of the vertices we're moving is
             # close to them
             for mv in self.move_vertices:
+                delta = mv - self.source_position
                 best_guide = None
                 best_guide_distance = (3, 0)
                 for col1, col2, guide in closest2.alignment_guides():
-                    guide_distance = guide.selection_distance(self.app, closest.get_point() + mv.delta)
+                    guide_distance = guide.selection_distance(self.app, closest.get_point() + delta)
                     if guide_distance[1] > 1.0:
                         continue
                     if guide_distance < best_guide_distance:
@@ -82,11 +89,11 @@ class Move(BaseTool):
                         best_guide = guide
                         # this lambda is used to make a DashedStem instance with the current value of the
                         # variables *except* closest, which will take the adjusted value from later
-                        make_dashed_stem = (lambda closest2=closest2, mv=mv, col1=col1, col2=col2:
-                                            DashedStem(closest2.get_point(), closest.get_point() + mv.delta, col1, col2))
+                        make_dashed_stem = (lambda closest2=closest2, delta=delta, col1=col1, col2=col2:
+                                            DashedStem(closest2.get_point(), closest.get_point() + delta, col1, col2))
                 if best_guide is not None:
                     try:
-                        subspace = subspace.intersect(best_guide.shifted(-mv.delta))
+                        subspace = subspace.intersect(best_guide.shifted(-delta))
                     except EmptyIntersection:
                         pass
                     else:
@@ -104,9 +111,16 @@ class Move(BaseTool):
             self.app.flash(make_dashed_stem())
 
         # Actually move the vertex
-        for mv in self.move_vertices:
-            mv.vertex.position = closest.get_point() + mv.delta
-        self.undo.refresh(self.app, self.app.model)
+        delta = closest.get_point() - self.source_position
+        old2new = dict([(v, v + delta) for v in self.move_vertices])
+        
+        if len(self.move_vertices) == 1:
+            name = 'Move vertex'
+        else:
+            name = 'Move %d vertices' % (len(self.move_vertices),)
+        self.model_step = ModelStep(self.app.model, name)
+        self.model_step.move_vertices(old2new, self.move_edges, self.move_faces)
+        self.model_step.apply(self.app)
 
 
     def start_movement(self, ctrl, closest):
@@ -114,22 +128,29 @@ class Move(BaseTool):
         if not move_vertices:
             return None
 
+        self.move_vertices = move_vertices
+        self.move_edges = set([edge for edge in self.app.model.edges
+                                    if edge.v1 in move_vertices or edge.v2 in move_vertices])
+        self.move_faces = []
+
         # compute the subspace inside which it's ok to move: we must not make any 
         # existing face non-planar
         subspace = WholeSpace()
 
         for face in self.app.model.faces:
             for edge in face.edges:
-                if edge.v1 in move_vertices:
+                if edge in self.move_edges:
                     break
             else:
                 continue     # none of the move_vertices belong to this face
+
+            self.move_faces.append(face)
 
             # check if we move that point completely off the current face's plane,
             # would the place stay planar?
             vertices = []
             for edge in face.edges:
-                position = edge.v1.position
+                position = edge.v1
                 if edge.v1 in move_vertices:
                     position += face.plane.normal * 100
                 vertices.append(position)
@@ -145,15 +166,8 @@ class Move(BaseTool):
                     break
 
         self.source_position = closest.get_subspace().project_point_inside(ctrl.position)
-        self.undo = UndoMove(move_vertices)
-        self.move_vertices = [MoveVertex(v, self.source_position) for v in move_vertices]
         self.initial_selection_guides = (list(closest.alignment_guides()) + 
                                          list(selection.all_45degree_guides(self.source_position)))
         self.subspace = subspace
+        self.model_step = ModelStep(self.app.model, "No movement")
         return ctrl
-
-
-class MoveVertex(object):
-    def __init__(self, vertex, source_position):
-        self.vertex = vertex
-        self.delta = vertex.position - source_position
