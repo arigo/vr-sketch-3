@@ -12,6 +12,7 @@ public class WorldScript : MonoBehaviour
         Polygon = 101,
         ColoredPolygon = 102,
         PolygonHighlight = 103,
+        TextHint = 150,
         SmallSphere = 200,
         RectanglePointer = 201,
         CrossPointer = 202,
@@ -178,9 +179,9 @@ public class WorldScript : MonoBehaviour
 
     void UpdateActiveControllers(Controller[] controllers)
     {
-        /* 'active_controllers = controllers' but trying to keep the order: even a new
-         * controller shows up before an existing one in the 'controllers' array,
-         * then it will be added after the existing entry in 'active_controllers'.
+        /* 'active_controllers = controllers' but trying to keep the order: even if a new
+         * controller shows up before an existing one in the 'controllers' array, it will
+         * be added after the existing entry in 'active_controllers'.
          */
         if (active_controllers == null)
             active_controllers = new List<Controller>();

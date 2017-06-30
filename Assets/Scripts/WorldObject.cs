@@ -22,4 +22,13 @@ public abstract class WorldObject : MonoBehaviour
                          ((color >> 8) & 0xff) / 255f,
                          (color & 0xff) / 255f);
     }
+
+    static public string GetString(float[] data, ref int index)
+    {
+        var sb = new System.Text.StringBuilder();
+        int text_length = (int)data[index++];
+        for (int i = 1; i <= text_length; i++)
+            sb.Append((char)data[index++]);
+        return sb.ToString();
+    }
 }

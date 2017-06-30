@@ -1,4 +1,5 @@
 from worldobj import ColoredPolygon, RectanglePointer, Cylinder, CrossPointer, DashedStem
+from worldobj import TextHint, distance2text
 from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint
 from model import EPSILON, ModelStep
 import selection
@@ -111,3 +112,6 @@ class Rectangle(BaseTool):
         #self.app.flash(Cylinder(p1, p2, selection.SelectedColorScheme.EDGE_AXIS[self.fixed_direction]))
         self.app.flash(Cylinder(p1, p2, selection.SelectedColorScheme.EDGE))
         self.app.flash(ColoredPolygon(self.rectangle, selection.TargetColorScheme.FACE))
+
+        self.app.flash(TextHint(p1, p2, distance2text(abs(p2 - p1))))
+        self.app.flash(TextHint(p1, p4, distance2text(abs(p4 - p1))))

@@ -39,7 +39,7 @@ class ControllersMgr(object):
         self.controllers = []
         self.tool = None
         #self.load_tool(self.TOOLS[0])
-        self.load_tool("Move")
+        self.load_tool("Rectangle")
 
     def load_tool(self, name):
         module = __import__("tools.%s" % (name.lower(),), None, None, [name])

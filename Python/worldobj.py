@@ -85,3 +85,28 @@ class Cylinder(Stem):
 
 class DashedStem(Stem):
     _kind = 252
+
+
+def _text2raw(text):
+    # 'text' can be a string or a unicode
+    return [len(text)] + [ord(ch) for ch in text]
+
+def distance2text(distance):
+    if distance >= 1.0:
+        return '%.2f m' % (distance,)
+    else:
+        return '%.0f cm' % (distance * 100.0,)
+
+class TextHint(WorldObject):
+    _kind = 150
+
+    def __init__(self, end1, end2, text):
+        self.end1 = end1
+        self.end2 = end2
+        self.text = text
+
+    def getrawdata(self):
+        lst = _text2raw(self.text)
+        lst.extend(self.end1.tolist())
+        lst.extend(self.end2.tolist())
+        return lst
