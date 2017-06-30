@@ -113,5 +113,6 @@ class Rectangle(BaseTool):
         self.app.flash(Cylinder(p1, p2, selection.SelectedColorScheme.EDGE))
         self.app.flash(ColoredPolygon(self.rectangle, selection.TargetColorScheme.FACE))
 
-        self.app.flash(TextHint(p1, p2, distance2text(abs(p2 - p1))))
-        self.app.flash(TextHint(p1, p4, distance2text(abs(p4 - p1))))
+        controller_num = self._all_controllers.index(follow_ctrl)
+        self.app.flash(TextHint(p1, p2, distance2text(abs(p2 - p1)), controller_num))
+        self.app.flash(TextHint(p1, p4, distance2text(abs(p4 - p1)), controller_num))

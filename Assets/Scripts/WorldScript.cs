@@ -44,6 +44,8 @@ public class WorldScript : MonoBehaviour
 
     /***************************************************************************************************/
 
+    public GameObject distanceKeypadPrefab;
+
     List<WorldObject> world_objects;
     Dictionary<Kind, WorldObject> world_prefabs;
     SignalErrorDelegate keepalive_error;
@@ -52,6 +54,12 @@ public class WorldScript : MonoBehaviour
     ShowMenuDelegate keepalive_show_menu;
     List<Controller> active_controllers;
     GameObject current_dialog;
+
+    public bool CheckController(Controller controller, int check_index)
+    {
+        return check_index >= 0 && check_index < active_controllers.Count &&
+            controller == active_controllers[check_index];
+    }
 
     static void CB_SignalError(string error)
     {
