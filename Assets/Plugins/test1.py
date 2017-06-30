@@ -10,6 +10,7 @@ ffibuilder.embedding_api("""
                        void (*__stdcall show_menu)(int, wchar_t *));
     int pyunityvr_frame(int num_controllers, float controllers[]);
     int pyunityvr_click(wchar_t *id);
+    int pyunityvr_manual_enter(int token, float value);
 """)
 
 ffibuilder.set_source("PyUnityVR_cffi", "")

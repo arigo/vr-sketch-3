@@ -100,15 +100,17 @@ def distance2text(distance):
 class TextHint(WorldObject):
     _kind = 150
 
-    def __init__(self, end1, end2, text, ignore_controller_num=-1):
+    def __init__(self, end1, end2, text, ignore_controller_num=-1, manual_enter_token=-1):
         self.end1 = end1
         self.end2 = end2
         self.text = text
         self.ignore_controller_num = ignore_controller_num
+        self.manual_enter_token = manual_enter_token
 
     def getrawdata(self):
         lst = _text2raw(self.text)
         lst.extend(self.end1.tolist())
         lst.extend(self.end2.tolist())
         lst.append(self.ignore_controller_num)
+        lst.append(self.manual_enter_token)
         return lst

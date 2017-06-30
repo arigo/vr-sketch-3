@@ -1,4 +1,5 @@
 from PyUnityVR_cffi import ffi
+import weakref
 import util, model, controller, worldobj
 from util import Vector3
 
@@ -20,6 +21,8 @@ class App(object):
         self.ctrlmgr = controller.ControllersMgr(self)
         self.undoable_actions = []
         self.redoable_actions = []
+        self.manual_tokens = weakref.WeakKeyDictionary()
+        self.next_manual_token = 1
 
     def display(self, worldobj):
         if worldobj not in self.pending_updates_seen:
@@ -120,6 +123,26 @@ class App(object):
             self.redoable_actions[-1].apply(self)
             action = self.redoable_actions.pop()
             self.undoable_actions.append(action.reversed())
+
+
+    def fetch_manual_token(self, owner, key):
+        try:
+            d = self.manual_tokens[owner]
+        except KeyError:
+            d = self.manual_tokens[owner] = {}
+        try:
+            result = d[key]
+        except KeyError:
+            result = d[key] = self.next_manual_token
+            self.next_manual_token += 1
+        return result
+
+    def handle_manual_enter(self, token, new_value):
+        for owner, d in self.manual_tokens.items():
+            for key, value in d.items():
+                if value == token:
+                    owner.manual_enter(key, new_value)
+                    return
 
 
 def initialize_functions(ffi, _fn_update, _fn_approx_plane, _fn_show_menu):

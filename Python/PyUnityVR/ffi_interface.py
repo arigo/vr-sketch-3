@@ -79,3 +79,8 @@ def pyunityvr_frame(num_controllers, controllers):
 def pyunityvr_click(id):
     _main.handle_click(ffi.string(id))
     return 42
+
+@ffi.def_extern(onerror=signal_error)
+def pyunityvr_manual_enter(token, value):
+    _main.handle_manual_enter(token, value)
+    return 42

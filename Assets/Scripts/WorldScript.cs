@@ -41,6 +41,9 @@ public class WorldScript : MonoBehaviour
     [DllImport("PyUnityVR_cffi")]
     public static extern int pyunityvr_click([In, MarshalAs(UnmanagedType.LPWStr)] string id);
 
+    [DllImport("PyUnityVR_cffi")]
+    public static extern int pyunityvr_manual_enter(int token, float value);
+
 
     /***************************************************************************************************/
 
@@ -55,10 +58,42 @@ public class WorldScript : MonoBehaviour
     List<Controller> active_controllers;
     GameObject current_dialog;
 
+    GameObject frozen_by;
+    int frozen_track_trigger;
+
+    public void SetFrozenBy(GameObject freezing_dialog)
+    {
+        frozen_by = freezing_dialog;
+        frozen_track_trigger = 1;   /* 2 = trigger released; 3 = trigger pressed again */
+    }
+
+    public GameObject IsCurrentlyFrozenBy()
+    {
+        return frozen_by;
+    }
+
+    public void UnFreeze()
+    {
+        if (frozen_by != null)
+        {
+            Destroy(frozen_by);
+            frozen_by = null;
+        }
+    }
+
     public bool CheckController(Controller controller, int check_index)
     {
         return check_index >= 0 && check_index < active_controllers.Count &&
             controller == active_controllers[check_index];
+    }
+
+    public void ManualEnter(int token, float value)
+    {
+        if (token >= 0)
+        {
+            if (pyunityvr_manual_enter(token, value) != 42)
+                Debug.LogError("pyunityvr_manual_enter() failed!");
+        }
     }
 
     static void CB_SignalError(string error)
@@ -205,6 +240,21 @@ public class WorldScript : MonoBehaviour
 
     private void Gt_onControllersUpdate(Controller[] controllers)
     {
+        if (frozen_by != null)
+        {
+            int pressed = 0;
+            foreach (var ctrl in controllers)
+                if (ctrl.triggerPressed)
+                    pressed = 1;
+
+            if ((frozen_track_trigger & 1) != pressed)
+                frozen_track_trigger++;
+            if (frozen_track_trigger < 4)
+                return;
+
+            UnFreeze();
+        }
+
         UpdateActiveControllers(controllers);
 
         int j = active_controllers.Count * 4;

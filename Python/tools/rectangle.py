@@ -11,6 +11,7 @@ class Rectangle(BaseTool):
     def __init__(self, app):
         BaseTool.__init__(self, app)
         self.fixed_direction = "y"
+        self.fixed_distance = {}
 
     def handle_hover(self, controllers):
         for ctrl in controllers:
@@ -28,7 +29,11 @@ class Rectangle(BaseTool):
 
         return None
 
+    def handle_cancel(self):
+        self.fixed_distance = {}
+
     def handle_accept(self):
+        self.fixed_distance = {}
         if self.rectangle:
             step = ModelStep(self.app.model, "Rectangle")
             e_list = []
@@ -80,7 +85,17 @@ class Rectangle(BaseTool):
                     selection_guide = closest2
 
         # Shift the target position to the alignment subspace
-        closest.adjust(subspace.project_point_inside(closest.get_point()))
+        p3 = subspace.project_point_inside(closest.get_point())
+
+        # Apply the fixed distances, if any
+        for fixed_key, fixed_dist in self.fixed_distance.items():
+            c1 = getattr(self.initial_selection.get_point(), fixed_key)
+            c2 = getattr(p3, fixed_key)
+            if abs(c1 - c2) > EPSILON:
+                c2 = (c1 + fixed_dist) if c2 > c1 else (c1 - fixed_dist)
+                p3 = p3.withcoord(fixed_key, c2)
+
+        closest.adjust(p3)
 
         # Draw the initial and final point
         self.initial_selection.flash(selection.SelectedColorScheme)
@@ -113,6 +128,17 @@ class Rectangle(BaseTool):
         self.app.flash(Cylinder(p1, p2, selection.SelectedColorScheme.EDGE))
         self.app.flash(ColoredPolygon(self.rectangle, selection.TargetColorScheme.FACE))
 
+        # Add the two distance hints, with the right key
         controller_num = self._all_controllers.index(follow_ctrl)
-        self.app.flash(TextHint(p1, p2, distance2text(abs(p2 - p1)), controller_num))
-        self.app.flash(TextHint(p1, p4, distance2text(abs(p4 - p1)), controller_num))
+        for pn in [p2, p4]:
+            cx = abs(p1.x - pn.x) > EPSILON
+            cy = abs(p1.y - pn.y) > EPSILON
+            cz = abs(p1.z - pn.z) > EPSILON
+            key = "x" * cx + "y" * cy + "z" * cz
+            if len(key) == 0:
+                continue
+            token = self.app.fetch_manual_token(self, key) if len(key) == 1 else -1
+            self.app.flash(TextHint(p1, pn, distance2text(abs(pn - p1)), controller_num, token))
+
+    def manual_enter(self, key, new_value):
+        self.fixed_distance[key] = new_value
