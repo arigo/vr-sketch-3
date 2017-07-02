@@ -112,7 +112,7 @@ class Move(BaseTool):
 
         # Actually move the vertex
         delta = closest.get_point() - self.source_position
-        old2new = dict([(v, v + delta) for v in self.move_vertices])
+        old2new = [(v, v + delta) for v in self.move_vertices]
         
         if len(self.move_vertices) == 1:
             name = 'Move vertex'
@@ -124,7 +124,7 @@ class Move(BaseTool):
 
 
     def start_movement(self, ctrl, closest):
-        move_vertices = set(closest.individual_vertices())
+        move_vertices = closest.individual_vertices()    # NB. a list, hopefully not too long, otherwise bad complexity
         if not move_vertices:
             return None
 

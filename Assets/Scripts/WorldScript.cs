@@ -271,7 +271,7 @@ public class WorldScript : MonoBehaviour
             int pressed = 0;
             if (ctrl.triggerPressed) pressed |= 1;
             if (ctrl.gripPressed) pressed |= 2;
-            if (ctrl.touchpadPressed) pressed |= 4;
+            if (ctrl.menuPressed) pressed |= 4;
 
             Vector3 pos = transform.InverseTransformPoint(ctrl.position);
             data[o + 0] = pos.x;

@@ -122,10 +122,15 @@ class ModelStep(object):
         self.fe_remove.update(move_edges)
         self.fe_remove.update(move_faces)
         edges_old2new = {}
+
+        def map_v(v):
+            for v_old, v_new in old2new:
+                if v_old == v:
+                    return v_new
+            return v
+        # xxx bad complexity here
         for edge in move_edges:
-            v1 = old2new.get(edge.v1, edge.v1)
-            v2 = old2new.get(edge.v2, edge.v2)
-            edges_old2new[edge] = self.add_edge(v1, v2)
+            edges_old2new[edge] = self.add_edge(map_v(edge.v1), map_v(edge.v2))
         for face in move_faces:
             edges = [edges_old2new.get(edge, edge) for edge in face.edges]
             self.add_face(edges)

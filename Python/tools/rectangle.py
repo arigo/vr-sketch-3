@@ -120,6 +120,10 @@ class Rectangle(BaseTool):
         elif dz < EPSILON:
             self.fixed_direction = "x" if dx > dy else "y"
 
+        if self.fixed_distance and self.fixed_direction not in self.fixed_distance:
+            choices = [(abs(getattr(p1, dir) - getattr(p3, dir)), dir) for dir in self.fixed_distance]
+            self.fixed_direction = max(choices)[1]
+
         p2 = p1.withcoord(self.fixed_direction, getattr(p3, self.fixed_direction))
         p4 = p3.withcoord(self.fixed_direction, getattr(p1, self.fixed_direction))
         self.rectangle = [p1, p2, p3, p4]

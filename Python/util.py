@@ -66,6 +66,9 @@ class Vector3(object):
             return NotImplemented
         return abs(self - other) >= EPSILON
 
+    def __hash__(self):
+        raise TypeError("cannot hash Vector3")
+
     def dot(self, other):
         return self.x * other.x + self.y * other.y + self.z * other.z
 
