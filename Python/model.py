@@ -118,6 +118,9 @@ class ModelStep(object):
         self.fe_add.append(face)
         return face
 
+    def remove(self, edge_or_face):
+        self.fe_remove.add(edge_or_face)
+
     def move_vertices(self, old2new, move_edges, move_faces):
         self.fe_remove.update(move_edges)
         self.fe_remove.update(move_faces)

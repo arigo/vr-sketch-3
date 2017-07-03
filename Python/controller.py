@@ -32,13 +32,12 @@ class Controller(object):
 
 
 class ControllersMgr(object):
-    TOOLS = ["Rectangle", "Move"]
+    TOOLS = ["Eraser", "Rectangle", "Move"]
 
     def __init__(self, app):
         self.app = app
         self.controllers = []
         self.tool = None
-        #self.load_tool(self.TOOLS[0])
         self.load_tool("Rectangle")
 
     def load_tool(self, name):

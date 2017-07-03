@@ -24,8 +24,8 @@ public class PolygonObject : WorldObject
         {
             Color col = GetColor24(data, vertices.Length * 3);
             Material mat = GetComponent<MeshRenderer>().material;
-            mat.SetColor("Outline Color", col);
-            mat.SetColor("Masked Outline Color", Color.Lerp(Color.black, col, 0.7f));
+            mat.SetColor("g_vOutlineColor", col);
+            mat.SetColor("g_vMaskedOutlineColor", Color.Lerp(Color.black, col, 0.7f));
         }
     }
 

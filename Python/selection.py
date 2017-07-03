@@ -31,6 +31,8 @@ class TargetColorScheme:
     VOID   = 0x00A000
     FACE   = 0x80FF80
 
+DELETE_COLOR = 0xFF364B
+
 
 class SelectVertex(object):
     def __init__(self, app, position):
@@ -39,6 +41,9 @@ class SelectVertex(object):
 
     def flash(self, color_scheme):
         self.app.flash(SmallSphere(self.position, color_scheme.VERTEX))
+
+    def flash_flat(self, color):
+        pass
 
     def get_point(self):
         return self.position
@@ -85,9 +90,11 @@ class SelectAlongEdge(object):
     def flash(self, color_scheme):
         p1 = self.edge.v1
         p2 = self.edge.v2
-        #self.app.flash(Cylinder(p1, p2, color_scheme.EDGE))
         color = color_scheme.EDGE if self.fraction != 0.5 else color_scheme.VERTEX
         self.app.flash(SmallSphere(p1 + (p2 - p1) * self.fraction, color))
+
+    def flash_flat(self, color):
+        self.app.flash(Cylinder(self.edge.v1, self.edge.v2, color))
 
     def get_point(self):
         p1 = self.edge.v1
@@ -132,6 +139,10 @@ class SelectOnFace(object):
         self.app.flash(PolygonHighlight([edge.v1 for edge in self.face.edges], color_scheme.FACE))
         self.app.flash(SmallSphere(self.position, color_scheme.FACE))
 
+    def flash_flat(self, color):
+        # xxx use ColoredPolygon with a shader to fix the overlap issue?
+        self.app.flash(PolygonHighlight([edge.v1 for edge in self.face.edges], color))
+
     def get_point(self):
         return self.position
 
@@ -156,6 +167,9 @@ class SelectVoid(object):
     def flash(self, color_scheme):
         self.app.flash(SmallSphere(self.position, color_scheme.VOID))
 
+    def flash_flat(self, color):
+        pass
+
     def get_point(self):
         return self.position
 
@@ -174,6 +188,8 @@ class SelectVoid(object):
 
 def find_closest(app, position, ignore=()):
     for attempt in [find_closest_vertex, find_closest_edge, find_closest_face]:
+        if attempt in ignore:
+            continue
         result = attempt(app, position, ignore=ignore)
         if result is not None:
             return result

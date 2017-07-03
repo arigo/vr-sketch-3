@@ -61,6 +61,9 @@ class CrossPointer(RectanglePointer):
 class MovePointer(RectanglePointer):
     _kind = 203
 
+class EraserPointer(RectanglePointer):
+    _kind = 204
+
 
 class Stem(WorldObject):
     _kind = 251
