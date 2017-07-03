@@ -135,12 +135,18 @@ class Rectangle(BaseTool):
         # Add the two distance hints, with the right key
         controller_num = self._all_controllers.index(follow_ctrl)
         for pn in [p2, p4]:
-            cx = abs(p1.x - pn.x) > EPSILON
-            cy = abs(p1.y - pn.y) > EPSILON
-            cz = abs(p1.z - pn.z) > EPSILON
-            key = "x" * cx + "y" * cy + "z" * cz
+            cx = abs(p1.x - pn.x)
+            cy = abs(p1.y - pn.y)
+            cz = abs(p1.z - pn.z)
+            key = "x" * (cx > EPSILON) + "y" * (cy > EPSILON) + "z" * (cz > EPSILON)
             if len(key) == 0:
                 continue
+            if len(key) == 2:
+                c_max, key1 = max([(cx, "x"), (cy, "y"), (cz, "z")])
+                if ((key1 == "x" or c_max > cx * 2) and
+                    (key1 == "y" or c_max > cy * 2) and
+                    (key1 == "z" or c_max > cz * 2)):
+                    key = key1
             token = self.app.fetch_manual_token(self, key) if len(key) == 1 else -1
             self.app.flash(TextHint(p1, pn, distance2text(abs(pn - p1)), controller_num, token))
 

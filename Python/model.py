@@ -134,3 +134,46 @@ class ModelStep(object):
         for face in move_faces:
             edges = [edges_old2new.get(edge, edge) for edge in face.edges]
             self.add_face(edges)
+
+    def _adjust(self, v_old, v_new):
+        for fe in self.fe_add:
+            if isinstance(fe, Edge):
+                if fe.v1 == v_old: fe.v1 = v_new
+                if fe.v2 == v_old: fe.v2 = v_new
+
+    def _adjust_vertex_to_old_position(self, v):
+        for edge in self.model.edges:
+            if edge.v1 == v: return edge.v1
+            if edge.v2 == v: return edge.v2
+        return v
+
+    def consolidate(self, app):
+        # - remove zero-lengh edges, and zero-edges faces
+        for fe in self.fe_add[:]:
+            if isinstance(fe, Edge) and fe.v1 == fe.v2:
+                self.fe_add.remove(fe)
+                v = (fe.v1 + fe.v2) * 0.5     # they may not be *exactly* equal
+                v = self._adjust_vertex_to_old_position(v)
+                self._adjust(fe.v1, v)
+                self._adjust(fe.v2, v)
+        for fe in self.fe_add[:]:
+            if isinstance(fe, Face):
+                fe.edges = [edge for edge in fe.edges if not edge.v1.exactly_equal(edge.v2)]
+                if len(fe.edges) == 0:
+                    self.fe_add.remove(fe)
+
+        # - subdivide faces if there are new edges in the middle of them
+        # XXX NOT IMPLEMENTED YET
+
+        # - remove duplicate faces
+        # XXX NOT IMPLEMENTED YET
+
+        # - assert that all the edges of the faces are present
+        all_edges = set(self.model.edges) - self.fe_remove
+        for fe in self.fe_add:
+            if isinstance(fe, Edge):
+                all_edges.add(fe)
+        for fe in self.fe_add:
+            if isinstance(fe, Face):
+                for edge in fe.edges:
+                    assert edge in all_edges

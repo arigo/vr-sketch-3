@@ -120,6 +120,7 @@ class Move(BaseTool):
             name = 'Move %d vertices' % (len(self.move_vertices),)
         self.model_step = ModelStep(self.app.model, name)
         self.model_step.move_vertices(old2new, self.move_edges, self.move_faces)
+        self.model_step.consolidate(self.app)
         self.model_step.apply(self.app)
 
 

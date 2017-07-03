@@ -16,8 +16,8 @@ public class TextHint : WorldObject
     {
         var ct = Controller.HoverTracker(this);
         ct.SetPriority(-5);
-        ct.onEnter += Ct_onEnter;
         ct.onLeave += Ct_onLeave;
+        ct.onMoveOver += Ct_onMoveOver;
         ct.onTouchDown += Ct_onDown;
         ct.onTriggerDown += Ct_onDown;
     }
@@ -85,17 +85,17 @@ public class TextHint : WorldObject
         }
     }
 
-    private void Ct_onEnter(Controller controller)
-    {
-        if (IgnoreController(controller))
-            return;
-
-        textMesh.color = selectedColor;
-    }
-
     private void Ct_onLeave(Controller controller)
     {
         textMesh.color = nonSelectedColor;
+    }
+
+    private void Ct_onMoveOver(Controller controller)
+    {
+        if (IgnoreController(controller))
+            textMesh.color = nonSelectedColor;
+        else
+            textMesh.color = selectedColor;
     }
 
     public override void UpdateWorldObject(float[] data)

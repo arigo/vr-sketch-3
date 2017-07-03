@@ -57,6 +57,7 @@ class App(object):
         self.destroy(wo)
 
     def execute_step(self, model_step):
+        model_step.consolidate(self)
         model_step.apply(self)
         self.record_undoable_action(model_step.reversed())
 

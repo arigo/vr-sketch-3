@@ -69,6 +69,9 @@ class Vector3(object):
     def __hash__(self):
         raise TypeError("cannot hash Vector3")
 
+    def exactly_equal(self, other):
+        return self.x == other.x and self.y == other.y and self.z == other.z
+
     def dot(self, other):
         return self.x * other.x + self.y * other.y + self.z * other.z
 
