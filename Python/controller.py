@@ -32,13 +32,14 @@ class Controller(object):
 
 
 class ControllersMgr(object):
-    TOOLS = ["Eraser", "Rectangle", "Move"]
+    TOOLS = ["Eraser", "Line", "Rectangle", "Move"]
+    TOOL_NAMES = {"Line": "Draw Line/Face"}
 
     def __init__(self, app):
         self.app = app
         self.controllers = []
         self.tool = None
-        self.load_tool("Rectangle")
+        self.load_tool("Line")
 
     def load_tool(self, name):
         module = __import__("tools.%s" % (name.lower(),), None, None, [name])
@@ -86,12 +87,12 @@ class ControllersMgr(object):
         self.tool.handle_controllers(self.controllers)
 
     def get_tools_menu(self):
+        for tool_name in self.TOOLS:
+            text = unicode(self.TOOL_NAMES.get(tool_name, tool_name))
+            if tool_name == self.selected_tool:
+                text = u"\u2714 " + text
+            yield ('tool_' + tool_name, text)
         uactions = self.app.undoable_actions
         ractions = self.app.redoable_actions
         yield ('undo', 'Undo %s' % (uactions[-1].name if uactions else '(nothing)'))
         yield ('redo', 'Redo %s' % (ractions[-1].name if ractions else '(nothing)'))
-        for tool_name in self.TOOLS:
-            text = unicode(tool_name)
-            if tool_name == self.selected_tool:
-                text = u"\u2714 " + text
-            yield ('tool_' + tool_name, text)

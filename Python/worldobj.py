@@ -1,3 +1,5 @@
+from util import EPSILON
+
 
 class WorldObject(object):
     _index = None
@@ -64,6 +66,9 @@ class MovePointer(RectanglePointer):
 class EraserPointer(RectanglePointer):
     _kind = 204
 
+class PencilPointer(RectanglePointer):
+    _kind = 205
+
 
 class Stem(WorldObject):
     _kind = 251
@@ -95,7 +100,7 @@ def _text2raw(text):
     return [len(text)] + [ord(ch) for ch in text]
 
 def distance2text(distance):
-    if distance >= 1.0:
+    if distance > 1.0 - EPSILON:
         return '%.2f m' % (distance,)
     else:
         return '%.0f cm' % (distance * 100.0,)

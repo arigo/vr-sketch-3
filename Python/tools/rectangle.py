@@ -87,6 +87,11 @@ class Rectangle(BaseTool):
         # Shift the target position to the alignment subspace
         p3 = subspace.project_point_inside(closest.get_point())
 
+        if selection_guide:
+            # Flash a dashed line to show that we have used the guide
+            self.app.flash(DashedStem(selection_guide.get_point(), p3,
+                                      selection_guide_colors[0], selection_guide_colors[1]))
+
         # Apply the fixed distances, if any
         for fixed_key, fixed_dist in self.fixed_distance.items():
             c1 = getattr(self.initial_selection.get_point(), fixed_key)
@@ -100,11 +105,6 @@ class Rectangle(BaseTool):
         # Draw the initial and final point
         self.initial_selection.flash(selection.SelectedColorScheme)
         closest.flash(selection.TargetColorScheme)
-
-        if selection_guide:
-            # Flash a dashed line to show that we have used the guide
-            self.app.flash(DashedStem(selection_guide.get_point(), closest.get_point(),
-                                        selection_guide_colors[0], selection_guide_colors[1]))
 
         # Build the rectangle based on these two points
         p1 = self.initial_selection.get_point()

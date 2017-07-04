@@ -7,9 +7,6 @@ from .base import BaseTool
 
 class Move(BaseTool):
 
-    def __init__(self, app):
-        BaseTool.__init__(self, app)
-
     def handle_hover(self, controllers):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position)

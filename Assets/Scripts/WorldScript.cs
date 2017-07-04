@@ -18,6 +18,7 @@ public class WorldScript : MonoBehaviour
         CrossPointer = 202,
         MovePointer = 203,
         EraserPointer = 204,
+        PencilPointer = 205,
         Cylinder = 250,
         Stem = 251,
         DashedStem = 252,

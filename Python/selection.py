@@ -30,6 +30,7 @@ class TargetColorScheme:
     EDGE   = 0x00D000
     VOID   = 0x00A000
     FACE   = 0x80FF80
+    DARKER_EDGE = 0x00A000
 
 DELETE_COLOR = 0xFF364B
 

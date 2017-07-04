@@ -31,11 +31,11 @@ class Eraser(BaseTool):
 
         text = []
         if edges:
-            text.append("%d edge%s" % (len(edges), "s" * (len(edges) > 1)))
+            text.append("-%d edge%s" % (len(edges), "s" * (len(edges) > 1)))
         if faces:
-            text.append("%d face%s" % (len(faces), "s" * (len(faces) > 1)))
+            text.append("-%d face%s" % (len(faces), "s" * (len(faces) > 1)))
 
-        step = ModelStep(self.app.model, "Erase %s" % (' + '.join(text),))
+        step = ModelStep(self.app.model, ', '.join(text))
         for fe in edges + faces:
             step.remove(fe)
         self.app.execute_step(step)
