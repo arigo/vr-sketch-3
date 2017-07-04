@@ -8,7 +8,7 @@ class Edge(object):
         self.v2 = v2
 
     def measure_distance(self, position):
-        # returns (fraction along the edge, distance)
+        # returns (fraction along the edge, distance from the line supporting the edge)
         v1 = self.v1
         v2 = self.v2
         p1 = v2 - v1
@@ -17,6 +17,16 @@ class Edge(object):
         length2 = p1.dot(p1)
         frac = dot / length2 if length2 else 0.0
         return frac, abs(p2 - p1 * frac)
+
+    def distance_to_point(self, point):
+        # returns the 3D distance from the point to the edge
+        frac, distance_to_line = self.measure_distance(point)
+        if frac <= 0:
+            return abs(self.v1 - point)
+        elif frac >= 1:
+            return abs(self.v2 - point)
+        else:
+            return distance_to_line
 
 
 class Face(object):
@@ -52,7 +62,8 @@ class Face(object):
         for i in range(len(uvs) - 1, -1, -1):
             uv1 = uvs[i]
             if (uv1[1] < pt[1]) != (uv2[1] < pt[1]):
-                x = (uv1[0] * uv2[1] - uv2[0] * uv1[1]) / (uv2[1] - uv1[1])
+                # (x - uv1[0]) / (uv2[0] - uv1[0]) == (pt[1] - uv1[1]) / (uv2[1] - uv1[1])
+                x = uv1[0] + (uv2[0] - uv1[0]) * (pt[1] - uv1[1]) / (uv2[1] - uv1[1])
                 if x < pt[0]:
                     side += -1 if uv1[1] < uv2[1] else 1
             uv2 = uv1

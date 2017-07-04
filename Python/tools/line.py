@@ -1,8 +1,8 @@
-from worldobj import PencilPointer, Stem, DashedStem, CrossPointer
+from worldobj import PencilPointer, Stem, DashedStem, CrossPointer, PolygonHighlight
 from worldobj import TextHint, distance2text
 from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint
 from model import EPSILON, ModelStep
-import selection
+import selection, face_reduction
 from .base import BaseTool
 
 
@@ -12,17 +12,29 @@ class Line(BaseTool):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position)
             self.app.flash(PencilPointer(closest.get_point()))
+
+            new_vertices = None
+            if isinstance(closest, selection.SelectVoid):
+                new_vertices = face_reduction.potential_new_face(self.app.model, closest.get_point(),
+                                                                 max_distance = 0.95 * selection.DISTANCE_FACE_MIN)
+                if new_vertices is not None:
+                    self.app.flash(PolygonHighlight(new_vertices, color = selection.TargetColorScheme.FACE))
+
             if ctrl.trigger_pressed():
-                self.initial_selection = closest
-                self.source_position = closest.get_point()
-                self.target_position = self.source_position
-                self.fixed_distance = None
-                return ctrl
+                if new_vertices is None:
+                    self.initial_selection = closest
+                    self.source_position = closest.get_point()
+                    self.target_position = self.source_position
+                    self.fixed_distance = None
+                    return ctrl
+                else:
+                    self.action_new_face(new_vertices)
+                    return None
         return None
 
     def handle_accept(self):
         if self.source_position != self.target_position:
-            step = ModelStep(self.app.model, "Draw Line")
+            step = ModelStep(self.app.model, "Draw line")
             step.add_edge(self.source_position, self.target_position)
             self.app.execute_step(step)
 
@@ -117,3 +129,8 @@ class Line(BaseTool):
     def manual_enter(self, key, new_value):
         assert key == "length"
         self.fixed_distance = new_value
+
+    def action_new_face(self, new_vertices):
+        step = ModelStep(self.app.model, "Draw face")
+        step.add_face([step.add_edge(new_vertices[i - 1], new_vertices[i]) for i in range(len(new_vertices))])
+        self.app.execute_step(step)

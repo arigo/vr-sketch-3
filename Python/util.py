@@ -163,6 +163,14 @@ class Plane(AffineSubspace):
     def from_point_and_normal(from_point, normal):
         return Plane(normal, -normal.dot(from_point))
 
+    def very_close_to_plane(self, other):
+        if self.normal == other.normal:
+            return abs(self.distance - other.distance) < EPSILON
+        elif self.normal == -other.normal:
+            return abs(self.distance + other.distance) < EPSILON
+        else:
+            return False
+
     def signed_distance_to_point(self, pt):
         return self.normal.dot(pt) + self.distance
 
