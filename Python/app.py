@@ -1,4 +1,3 @@
-from PyUnityVR_cffi import ffi
 import weakref
 import util, model, controller, worldobj
 from util import Vector3
