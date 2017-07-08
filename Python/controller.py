@@ -78,11 +78,15 @@ class ControllersMgr(object):
         # are pressed; the actual logic for the grip button is in C#
         if len(self.controllers) >= 2:
             if self.controllers[0].pressed & self.controllers[1].pressed & PRESS_GRIP:
-                color = self.app.current_time % 1.0
-                if color > 0.5: color = 1.0 - color
-                color = int(300 * color) * 0x010101
+                #color = self.app.current_time % 1.0
+                #if color > 0.5: color = 1.0 - color
+                #color = int(300 * color) * 0x010101
+                color = 0x404040
                 self.app.flash(worldobj.Cylinder(
                     self.controllers[0].position, self.controllers[1].position, color=color))
+                text = "%.2f x" % (self.app.model_scale,)
+                self.app.flash(worldobj.TextHint(
+                    self.controllers[0].position, self.controllers[1].position, text))
 
         self.tool.handle_controllers(self.controllers)
 
