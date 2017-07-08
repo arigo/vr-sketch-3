@@ -1,27 +1,25 @@
-from util import EPSILON, Plane
+from util import EPSILON, Plane, GeometryDict
 import model
 
 
-def all_planes_containing_point(model, point, max_distance=EPSILON):
-    # XXX bad complexity
-    seen = []
-    result = []
-    for edge1 in model.edges:
-        for edge2 in model.edges:
-            if edge1.v2 == edge2.v1 or edge1.v2 == edge2.v2:
-                normal = (edge1.v2 - edge1.v1).cross(edge2.v2 - edge2.v1)
-                normal_length = abs(normal)
-                if normal_length > EPSILON:
-                    normal /= normal_length
-                    if abs(normal.dot(edge1.v2) - normal.dot(point)) < max_distance:
-                        if normal not in seen:
-                            yield Plane.from_point_and_normal(edge1.v2, normal)
-                            seen.append(normal)
+def all_potential_planes(model):
+    if "potential_planes" not in model.caches:
+        result = GeometryDict()
+        for edge1 in model.edges:
+            for edge2 in model.edges:
+                if edge1.v2 == edge2.v1 or edge1.v2 == edge2.v2:
+                    normal = (edge1.v2 - edge1.v1).cross(edge2.v2 - edge2.v1)
+                    normal_length = abs(normal)
+                    if normal_length > EPSILON:
+                        normal /= normal_length
+                        result[Plane.from_point_and_normal(edge1.v2, normal)] = True
+        model.caches["potential_planes"] = result.keys()
+    return model.caches["potential_planes"]
 
 def potential_new_face(model, point, max_distance=EPSILON):
     best_vertices = None
     best_distance = max_distance
-    for plane in all_planes_containing_point(model, point, max_distance):
+    for plane in all_potential_planes(model):
         # if the plane is farther than the previous best, ignore
         distance = plane.distance_to_point(point)
         if distance > best_distance:

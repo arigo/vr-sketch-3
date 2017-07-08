@@ -113,3 +113,37 @@ def test_shifted():
     assert ln.axis == Vector3(1, 0, 0)
     sp = SinglePoint(Vector3(1.1, 2.2, 3.3)).shifted(delta)
     assert sp.position == Vector3(5.1, 7.2, 9.3)
+
+def test_v3dict():
+    d = GeometryDict()
+    k1 = Vector3(4, 5, 6)
+    k2 = Vector3(4, 5, 6.1)
+    d[k1] = 123
+    d[k2] = 234
+    assert d[k1] == 123
+    assert d[k2] == 234
+    assert k1 in d
+    assert k2 in d
+    assert Vector3(4, 5.00000001, 6) in d
+    assert Vector3(4, 5.01, 6) not in d
+    assert Vector3(4, 5 + EPSILON * 1.1, 6) not in d
+    assert d[Vector3(4, 5.00000001, 6)] == 123
+    d[Vector3(4, 5.00000001, 6)] = "foo"
+    assert d[k1] == "foo"
+    dkeys = d.keys()
+    assert dkeys == [k1, k2] or dkeys == [k2, k1]
+
+def test_planedict():
+    d = GeometryDict()
+    p1 = Plane(Vector3(4, 5, 6), 10)
+    p2 = Plane(Vector3(4, 5, 6), 10.01)
+    p3 = Plane(Vector3(4, 5.01, 6), 10.01)
+    d[p1] = 123
+    d[p2] = 234
+    d[p3] = 345
+    assert d[p1] == 123
+    assert d.get(p2) == 234
+    assert d.get(p3) == 345
+    assert d.get(Plane(Vector3(4, 5, 6.01), 10)) is None
+    assert Plane(Vector3(4, 5, 6.01), 10) not in d
+    assert sorted(d.keys()) == sorted([p1, p2, p3])

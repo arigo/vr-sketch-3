@@ -104,6 +104,87 @@ class Vector3(object):
     def project_orthogonal(self, normal):
         return self - normal * normal.dot(self) / float(normal.dot(normal))
 
+    def _v_hash0(self):
+        # goal: return a number whose integer part is used as hash in GeometryDict.
+        # Two Vector3 at a distance < EPSILON must return a number that is at most 1.0 apart.
+        # The constants use the fact that EPSILON == 1e-5.
+        return self.x * 5e4 + self.y * 4.19812e4 + self.z * 3.8219e4
+
+
+class GeometryDictEntry(object):
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+
+
+class GeometryDict(object):
+
+    def __init__(self):
+        self._dict = {}    # {v_hash: [GeometryDictEntry]}
+        # Every key appears at least twice: once with its hash0, once with its hash1.
+        # The goal is that Vector3's that are equal to each other are considered
+        # to be the same key in this GeometryDict.
+
+    def _v_hashes(self, v):
+        h = math.floor(v._v_hash0())
+        return [h, h + 1.0]
+
+    def _find_entry(self, v):
+        for h in self._v_hashes(v):
+            lst = self._dict.get(h)
+            if lst:
+                for entry in lst:
+                    if entry.key == v:
+                        return entry
+        return None
+
+    def __contains__(self, v):
+        return self._find_entry(v) is not None
+
+    def __getitem__(self, v):
+        n = self._find_entry(v)
+        if n is None:
+            raise KeyError(v)
+        return n.value
+
+    def _add_entry(self, key, value):
+        n = GeometryDictEntry(key, value)
+        for h in self._v_hashes(key):
+            lst = self._dict.setdefault(h, [])
+            lst.append(n)
+
+    def __setitem__(self, v, value):
+        n = self._find_entry(v)
+        if n is None:
+            self._add_entry(v, value)
+        else:
+            n.value = value
+
+    def get(self, v, default=None):
+        n = self._find_entry(v)
+        if n is None:
+            return default
+        return n.value
+
+    def setdefault(self, v, default=None):
+        n = self._find_entry(v)
+        if n is None:
+            self._add_entry(v, default)
+            return default
+        return n.value
+
+    def _entries_set(self):
+        seen = set()
+        for lst in self._dict.values():
+            seen.update(lst)
+        return seen
+
+    def keys(self):
+        return [n.key for n in self._entries_set()]
+
+    def items(self):
+        return [(n.key, n.value) for n in self._entries_set()]
+
 
 class AffineSubspace(object):
     """Base class for affine subspaces of the space."""
@@ -203,9 +284,25 @@ class Plane(AffineSubspace):
     def shifted(self, delta):
         return Plane(self.normal, self.distance - self.normal.dot(delta))
 
+    def __eq__(self, other):
+        if not isinstance(other, Plane):
+            return NotImplemented
+        return self.normal == other.normal and abs(self.distance - other.distance) < EPSILON
+
+    def __ne__(self, other):
+        if not isinstance(other, Plane):
+            return NotImplemented
+        return self.normal != other.normal or not (abs(self.distance - other.distance) < EPSILON)
+
+    def __hash__(self):
+        raise TypeError("cannot hash Plane")
+
+    def _v_hash0(self):
+        return self.normal._v_hash0() + self.distance * 2.9601e4
+
 
 class Line(AffineSubspace):
-    _SELECTION_DISTANCE = 0.044
+    _SELECTION_DISTANCE = 0.042
     _DIMENSIONALITY = 1
 
     def __init__(self, from_point, axis):

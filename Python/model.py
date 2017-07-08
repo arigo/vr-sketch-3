@@ -75,6 +75,7 @@ class Model(object):
     def __init__(self):
         self.edges = []
         self.faces = []
+        self.caches = {}
 
     def all_vertices(self):
         for edge in self.edges:
@@ -191,3 +192,6 @@ class ModelStep(object):
             if isinstance(fe, Face):
                 for edge in fe.edges:
                     assert edge in all_edges
+
+        # - remove the caches
+        self.model.caches.clear()
