@@ -130,6 +130,8 @@ class GeometryDict(object):
         return [h, h + 1.0]
 
     def _find_entry(self, v):
+        if not hasattr(v, '_v_hash0'):
+            return None
         for h in self._v_hashes(v):
             lst = self._dict.get(h)
             if lst:
@@ -184,6 +186,13 @@ class GeometryDict(object):
 
     def items(self):
         return [(n.key, n.value) for n in self._entries_set()]
+
+    def __iter__(self):
+        for n in self._entries_set():
+            yield n.key
+
+    def __len__(self):
+        return len(self._entries_set())
 
 
 class AffineSubspace(object):

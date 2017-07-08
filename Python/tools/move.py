@@ -1,5 +1,5 @@
 from worldobj import MovePointer, DashedStem, CrossPointer
-from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint
+from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint, GeometryDict
 from model import EPSILON, ModelStep
 import selection
 from .base import BaseTool
@@ -122,7 +122,9 @@ class Move(BaseTool):
 
 
     def start_movement(self, ctrl, closest):
-        move_vertices = closest.individual_vertices()    # NB. a list, hopefully not too long, otherwise bad complexity
+        move_vertices = GeometryDict()
+        for v in closest.individual_vertices():
+            move_vertices[v] = True
         if not move_vertices:
             return None
 
