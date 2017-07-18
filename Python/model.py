@@ -373,10 +373,7 @@ class ModelStep(object):
         for k in range(len(current_branch) - 1):
             edges2.append(self.add_edge(current_branch[k], current_branch[k + 1]))
 
-        try:
-            self.fe_add.remove(face)
-        except ValueError:
-            self.fe_remove.add(face)
+        self.fe_remove.add(face)
         self.add_face(edges1)
         self.add_face(edges2)
         return True
@@ -392,6 +389,16 @@ class ModelStep(object):
             elif isinstance(fe, Face):
                 for edge in all_edges:
                     progress |= self._consolidate_subdivide_face(fe, edge)
+
+        # normalize: kill faces that are both added and removed
+        if progress:
+            add_remain = []
+            for fe in self.fe_add:
+                if fe in self.fe_remove:
+                    self.fe_remove.remove(fe)
+                else:
+                    add_remain.append(fe)
+            self.fe_add = add_remain
         return progress
 
     def consolidate(self, app):
@@ -409,12 +416,31 @@ class ModelStep(object):
         # - remove duplicate edges and faces
         # XXX NOT IMPLEMENTED YET
 
+        self.check_valid()
+
+        # - remove the caches
+        self.model.caches.clear()
+
+    def check_valid(self):
         # - assert that all the edges of the faces are present
         all_edges = self._all_active_edges()
         for fe in self.fe_add:
             if isinstance(fe, Face):
                 for edge in fe.edges:
                     assert edge in all_edges
-
-        # - remove the caches
-        self.model.caches.clear()
+        # - assert that we don't remove anything not present
+        for fe in self.fe_remove:
+            if isinstance(fe, Face):
+                assert fe in self.model.faces
+            elif isinstance(fe, Edge):
+                assert fe in self.model.edges
+            else:
+                raise TypeError(type(fe))
+        # - assert that we don't add something already there
+        for fe in self.fe_add:
+            if isinstance(fe, Face):
+                assert fe not in self.model.faces
+            elif isinstance(fe, Edge):
+                assert fe not in self.model.edges
+            else:
+                raise TypeError(type(fe))

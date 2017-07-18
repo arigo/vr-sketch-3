@@ -262,7 +262,10 @@ class Plane(AffineSubspace):
         for v in vertices:
             lst += v.tolist()
         result = _approx_plane(lst)
-        return Plane(Vector3(result[0], result[1], result[2]), -result[3])
+        plane = Plane(Vector3(result[0], result[1], result[2]), result[3])
+        #for v in vertices:
+        #    assert plane.distance_to_point(v) <= EPSILON
+        return plane
 
     @staticmethod
     def from_point_and_normal(from_point, normal):

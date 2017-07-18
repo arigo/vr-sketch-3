@@ -8,7 +8,7 @@ def fake_approx_plane(lst):
     assert len(lst) >= 3
     for z in lst[2 : len(lst) : 3]:
         assert z == 1.0, "missing approx_plane: %r" % (lst,)
-    return (0., 0., 1., 1.)
+    return (0., 0., 1., -1.)
 
 def setup_module(mod):
     import util
@@ -27,6 +27,7 @@ def test_initial_rectangle():
     e3 = step.add_edge(v3, v4)
     e4 = step.add_edge(v4, v1)
     step.add_face([e1, e2, e3, e4])
+    step.check_valid()
     step._apply_to_model()
     
     assert len(model.faces) == 1
@@ -105,6 +106,7 @@ def test_consolidate_subdivide_edges():
     assert step.fe_add[5].v2 == Vector3(0  , 1, 1)    #  |  |  |
                                                       #  |  |  |
                                                       #  +XX---+
+    step.check_valid()
 
 def test_consolidate_subdivide_face():
     model = test_initial_rectangle()
@@ -136,3 +138,24 @@ def test_consolidate_subdivide_face_2():
 
     r = step.consolidate_subdivide_faces()
     assert r is False
+    step.check_valid()
+
+def test_consolidate_subdivide_edges_and_faces():
+    model = test_initial_rectangle()
+    v1 = Vector3(0.5, 0, 1)
+    v2 = Vector3(0.5, 1, 1)
+    step = ModelStep(model, "Split in two, and subdivide the face in addition to the edges")
+    step.add_edge(v1, v2)
+    while step.consolidate_subdivide_edges():
+        pass
+    step.check_valid()
+    r = step.consolidate_subdivide_faces()
+    assert r is True
+    step.check_valid()
+    r = step.consolidate_subdivide_faces()
+    assert r is False
+    step.check_valid()
+    assert len([fe for fe in step.fe_remove if isinstance(fe, Face)]) == 1
+    assert len([fe for fe in step.fe_remove if isinstance(fe, Edge)]) == 2
+    assert len([fe for fe in step.fe_add if isinstance(fe, Face)]) == 2
+    assert len([fe for fe in step.fe_add if isinstance(fe, Edge)]) == 6
