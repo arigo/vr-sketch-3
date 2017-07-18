@@ -1,4 +1,5 @@
 from worldobj import MovePointer, DashedStem, CrossPointer
+from worldobj import TextHint, distance2text
 from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint, GeometryDict
 from model import EPSILON, ModelStep
 import selection
@@ -100,11 +101,20 @@ class Move(BaseTool):
                         selection_guides.append(make_dashed_stem)
 
         # Shift the target position to the alignment subspace
-        closest.adjust(subspace.project_point_inside(closest.get_point()))
+        p3 = subspace.project_point_inside(closest.get_point())
+
+        # Apply the fixed distance, if any
+        if self.fixed_distance is not None:
+            length1 = abs(self.source_position - p3)
+            if length1 > EPSILON:
+                p3 = self.source_position + (p3 - self.source_position) * (self.fixed_distance / length1)
+
+        closest.adjust(p3)
 
         # Draw a dashed line from the initial to the final point
-        self.app.flash(DashedStem(self.source_position, closest.get_point(),
-                                  *original_stem_color))
+        p1 = self.source_position
+        p2 = closest.get_point()
+        self.app.flash(DashedStem(p1, p2, *original_stem_color))
 
         for make_dashed_stem in selection_guides:
             # Flash a dashed line to show that we have used the guide
@@ -121,6 +131,16 @@ class Move(BaseTool):
         self.model_step = ModelStep(self.app.model, name)
         self.model_step.move_vertices(old2new, self.move_edges, self.move_faces)
         self.app.execute_temporary_step(self.model_step)
+
+        # Add the distance hint
+        controller_num = self._all_controllers.index(follow_ctrl)
+        token = self.app.fetch_manual_token(self, "length")
+        self.app.flash(TextHint(p1, p2, distance2text(abs(p2 - p1)), controller_num, token))
+
+
+    def manual_enter(self, key, new_value):
+        assert key == "length"
+        self.fixed_distance = new_value
 
 
     def start_movement(self, ctrl, closest):
@@ -180,4 +200,5 @@ class Move(BaseTool):
                                          list(selection.all_45degree_guides(self.source_position)))
         self.subspace = subspace
         self.model_step = ModelStep(self.app.model, "No movement")
+        self.fixed_distance = None
         return ctrl
