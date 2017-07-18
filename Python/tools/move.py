@@ -58,7 +58,7 @@ class Move(BaseTool):
                 else:
                     if isinstance(try_subspace, SinglePoint) and try_subspace.position == self.source_position:
                         continue
-                    best_guide_distance = guide_distance
+                    best_guide_distance = selection.marginal_increase(guide_distance)
                     best_guide = guide
                     best_subspace = try_subspace
                     selection_guide_colors = col1, col2
@@ -85,7 +85,7 @@ class Move(BaseTool):
                     if guide_distance[1] > 1.0:
                         continue
                     if guide_distance < best_guide_distance:
-                        best_guide_distance = guide_distance
+                        best_guide_distance = selection.marginal_increase(guide_distance)
                         best_guide = guide
                         # this lambda is used to make a DashedStem instance with the current value of the
                         # variables *except* closest, which will take the adjusted value from later

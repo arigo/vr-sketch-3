@@ -56,7 +56,7 @@ class Line(BaseTool):
             if guide_distance[1] > 1.0:
                 continue
             if guide_distance < best_guide_distance:
-                best_guide_distance = guide_distance
+                best_guide_distance = selection.marginal_increase(guide_distance)
                 best_guide = guide
                 selection_guide_colors_1 = col1, col2
         if best_guide is not None:
@@ -85,7 +85,7 @@ class Line(BaseTool):
                 if guide_distance[1] > 1.0:
                     continue
                 if guide_distance < best_guide_distance:
-                    best_guide_distance = guide_distance
+                    best_guide_distance = selection.marginal_increase(guide_distance)
                     best_guide = guide
                     selection_guide_colors = col1, col2
             if best_guide is not None:

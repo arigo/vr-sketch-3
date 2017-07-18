@@ -124,10 +124,10 @@ class SelectAlongEdge(object):
     def alignment_guides(self):
         p1 = self.edge.v1
         p2 = self.edge.v2
-        yield 0x00FFFF, 0x00FFFF, Line(p1, (p2 - p1).normalized())
+        yield 0xC0C0C0, 0xC0C0C0, Line(p1, (p2 - p1).normalized())
         if self.fraction == 0.5:
             p = (p1 + p2) * 0.5
-            yield 0x00FFFF, 0x00FFFF, Plane.from_point_and_normal(p, (p2 - p1).normalized())
+            yield 0xC0C0C0, 0xC0C0C0, Plane.from_point_and_normal(p, (p2 - p1).normalized())
             for guide in all_45degree_guides(p):
                 yield guide
 
@@ -162,7 +162,7 @@ class SelectOnFace(object):
         self.position = self.face.plane.project_point_inside(pt)
 
     def alignment_guides(self):
-        yield 0x00FFFF, 0x80FFFF, self.face.plane
+        yield 0xB0B0B0, 0xC0C0C0, self.face.plane
 
     def individual_vertices(self):
         return [edge.v1 for edge in self.face.edges]
@@ -200,6 +200,12 @@ class SelectVoid(object):
     def individual_edges(self):
         return []
 
+
+def marginal_increase(dist):
+    if isinstance(dist, tuple):
+        return dist[:-1] + (dist[-1] * 1.01,)
+    else:
+        return dist * 1.01
 
 def find_closest(app, position, ignore=()):
     for attempt in [find_closest_vertex, find_closest_edge, find_closest_face]:
