@@ -60,6 +60,10 @@ class App(object):
         model_step.apply(self)
         self.record_undoable_action(model_step.reversed())
 
+    def execute_temporary_step(self, model_step):
+        model_step.consolidate_temporary()
+        model_step.apply(self)
+
     def scale_ctrl(self, distance):
         return distance / self.model_scale
 

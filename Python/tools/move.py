@@ -22,7 +22,9 @@ class Move(BaseTool):
         self.model_step.reversed().apply(self.app)
 
     def handle_accept(self):
-        self.app.record_undoable_action(self.model_step.reversed())
+        self.handle_cancel()
+        self.app.execute_step(self.model_step)
+        del self.model_step
 
     def handle_drag(self, follow_ctrl, other_ctrl=None):
         self.handle_cancel()
@@ -117,8 +119,7 @@ class Move(BaseTool):
             name = 'Move %d vertices' % (len(self.move_vertices),)
         self.model_step = ModelStep(self.app.model, name)
         self.model_step.move_vertices(old2new, self.move_edges, self.move_faces)
-        self.model_step.consolidate(self.app)
-        self.model_step.apply(self.app)
+        self.app.execute_temporary_step(self.model_step)
 
 
     def start_movement(self, ctrl, closest):

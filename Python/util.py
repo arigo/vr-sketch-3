@@ -110,6 +110,21 @@ class Vector3(object):
         # The constants use the fact that EPSILON == 1e-5.
         return self.x * 5e4 + self.y * 4.19812e4 + self.z * 3.8219e4
 
+    def between(self, p1, p2):
+        p12 = p2 - p1
+        f = p12.dot(self)
+        g = p12.dot(p1)
+        h = p12.dot(p2)
+        if g > h:
+            g, h = h, g
+        return g - EPSILON < f < h + EPSILON
+
+    def some_normal_vector(self):
+        if abs(self.x) > abs(self.y) and abs(self.x) > abs(self.z):
+            return Vector3(self.y, -self.x, 0.0)
+        else:
+            return Vector3(0.0, self.y, -self.z)
+
 
 class GeometryDictEntry(object):
     def __init__(self, key, value):
@@ -335,9 +350,10 @@ class Line(AffineSubspace):
         #
         # otherwise, the intersection is at most one point
         if isinstance(subspace, Line):
-            v = (self.from_point - subspace.from_point).project_orthogonal(subspace.axis)
-            d1 = v.dot(v)
-            d2 = v.dot(v + self.axis)
+            v = self.axis.project_orthogonal(subspace.axis)
+            vk = self.from_point - subspace.from_point
+            d1 = v.dot(vk)
+            d2 = v.dot(vk + self.axis)
         elif isinstance(subspace, Plane):
             d1 = subspace.signed_distance_to_point(self.from_point)
             d2 = subspace.signed_distance_to_point(self.from_point + self.axis)

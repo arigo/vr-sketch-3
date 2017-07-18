@@ -1,5 +1,4 @@
-from util import Vector3, Plane, EPSILON
-import worldobj
+from util import Vector3, Plane, Line, SinglePoint, EPSILON, EmptyIntersection
 
 
 class Edge(object):
@@ -27,6 +26,30 @@ class Edge(object):
             return abs(self.v2 - point)
         else:
             return distance_to_line
+
+    def supporting_line(self):
+        # Returns the Line containing the edge, or the SinglePoint if the length is ~0
+        middle = (self.v1 + self.v2) * 0.5
+        v = self.v1 - self.v2
+        length = abs(v)
+        if length < EPSILON:
+            return SinglePoint(middle)
+        return Line(middle, v / length)
+
+    def intersect_edge(self, other_edge):
+        # Return None if the two edges are not coplanar, if they miss each other,
+        # or if they are colinear.  Return the intersection point otherwise.
+        line1 = self.supporting_line()
+        line2 = other_edge.supporting_line()
+        try:
+            sp = line1.intersect(line2)
+        except EmptyIntersection:
+            return None
+        if isinstance(sp, SinglePoint):
+            point = sp.position
+            if point.between(self.v1, self.v2) and point.between(other_edge.v1, other_edge.v2):
+                return point
+        return None
 
 
 class Face(object):
@@ -96,7 +119,9 @@ class ModelStep(object):
             app._remove_edge_or_face(edge_or_face)
         for edge_or_face in self.fe_add:
             app._add_edge_or_face(edge_or_face)
+        self._apply_to_model()
 
+    def _apply_to_model(self):
         fe_remove = self.fe_remove
         self.model.edges = [edge for edge in self.model.edges if edge not in fe_remove]
         self.model.faces = [face for face in self.model.faces if face not in fe_remove]
@@ -162,7 +187,7 @@ class ModelStep(object):
             if edge.v2 == v: return edge.v2
         return v
 
-    def consolidate(self, app):
+    def consolidate_temporary(self):
         # - remove zero-lengh edges, and zero-edges faces
         for fe in self.fe_add[:]:
             if isinstance(fe, Edge) and fe.v1 == fe.v2:
@@ -177,17 +202,97 @@ class ModelStep(object):
                 if len(fe.edges) == 0:
                     self.fe_add.remove(fe)
 
-        # - subdivide faces if there are new edges in the middle of them
-        # XXX NOT IMPLEMENTED YET
-
-        # - remove duplicate faces
-        # XXX NOT IMPLEMENTED YET
-
-        # - assert that all the edges of the faces are present
+    def _all_active_edges(self):
         all_edges = set(self.model.edges) - self.fe_remove
         for fe in self.fe_add:
             if isinstance(fe, Edge):
+                assert fe not in self.fe_remove
                 all_edges.add(fe)
+        return all_edges
+
+    def _all_active_faces(self):
+        all_faces = set(self.model.faces) - self.fe_remove
+        for fe in self.fe_add:
+            if isinstance(fe, Face):
+                assert fe not in self.fe_remove
+                all_faces.add(fe)
+        return all_faces
+
+    def _remove_edge_and_add_copy(self, edge):
+        assert isinstance(edge, Edge)
+        assert edge not in self.fe_remove
+        self.fe_remove.add(edge)
+        copy = Edge(edge.v1, edge.v2)
+        self.fe_add.append(copy)
+        #
+        for face in self._all_active_faces():
+            if edge in face.edges:
+                try:
+                    self.fe_add.remove(face)
+                except ValueError:
+                    self.fe_remove.add(face)
+                edges = face.edges[:]
+                i = edges.index(edge)
+                edges[i] = copy
+                self.fe_add.append(Face(edges))
+        return copy
+
+    def consolidate_subdivide_edges(self):
+        # find edges in the existing model that need to be split, and remove-readd them
+        for fe in self.fe_add:
+            if isinstance(fe, Edge):
+                for edge in self.model.edges:
+                    if edge in self.fe_remove:
+                        continue
+                    point = edge.intersect_edge(fe)
+                    if point is None:
+                        continue
+                    if abs(point - edge.v1) > 2 * EPSILON and abs(point - edge.v2) > 2 * EPSILON:
+                        self._remove_edge_and_add_copy(edge)
+        #
+        # find pairs (fe, edge), where the 'edge' cuts 'fe' in two
+        progress = False
+        all_edges = self._all_active_edges()
+        for i, fe in enumerate(self.fe_add):
+            if isinstance(fe, Edge):
+                for edge in all_edges:
+                    point = edge.intersect_edge(fe)
+                    if point is None:
+                        continue
+                    if abs(point - fe.v1) > 2 * EPSILON and abs(point - fe.v2) > 2 * EPSILON:
+                        del self.fe_add[i]
+                        fe1 = Edge(fe.v1, point)
+                        fe2 = Edge(point, fe.v2)
+                        self.fe_add.append(fe1)
+                        self.fe_add.append(fe2)
+                        for fef in self.fe_add:
+                            if isinstance(fef, Face):
+                                try:
+                                    index = fef.edges.index(fe)
+                                except ValueError:
+                                    pass
+                                else:
+                                    fef.edges[index] = fe1
+                                    fef.edges.insert(index + 1, fe2)
+                        progress = True
+        return progress
+
+    def consolidate(self, app):
+        # - remove zero-length edges, and zero-edges faces
+        self.consolidate_temporary()
+
+        # - subdivide edges if there are new edges that cross them in the middle
+        while self.consolidate_subdivide_edges():
+            pass
+
+        # - subdivide faces if there are new edges in the middle of them
+        # XXX NOT IMPLEMENTED YET
+
+        # - remove duplicate edges and faces
+        # XXX NOT IMPLEMENTED YET
+
+        # - assert that all the edges of the faces are present
+        all_edges = self._all_active_edges()
         for fe in self.fe_add:
             if isinstance(fe, Face):
                 for edge in fe.edges:

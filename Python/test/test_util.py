@@ -86,6 +86,13 @@ def test_intersect():
     inter = line.intersect(Line(Vector3(6, 3.1, 8), Vector3(0, 0, -1)))
     assert isinstance(inter, SinglePoint)
     assert inter.position == Vector3(6, 3.1, 4.2)
+
+    line1k = Line(Vector3(0.5, 0.0, 3.0), Vector3(-1.0, 0.0, 0.0))
+    line2k = Line(Vector3(0.5, 0.5, 3.0), Vector3(0.0, -1.0, 0.0))
+    inter = line1k.intersect(line2k)
+    assert isinstance(inter, SinglePoint)
+    assert inter.position == Vector3(0.5, 0.0, 3.0)
+
     py.test.raises(EmptyIntersection, line.intersect,
                            Line(Vector3(6, 3.2, 8), Vector3(0, 0, -1)))
     inter = line.intersect(Plane(Vector3(-1, 0, 0), 6.78))
