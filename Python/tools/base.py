@@ -3,6 +3,7 @@ DISTANCE_MOVEMENT_TIME = 0.4
 
 
 class BaseTool(object):
+    KEEP_SELECTION = False
 
     def __init__(self, app):
         self.app = app
@@ -42,6 +43,10 @@ class BaseTool(object):
         return None
 
     def handle_controllers(self, controllers):
+        if not self.KEEP_SELECTION and self.app.selected_edges:
+            self.app.selected_edges.clear()
+            self.app.selection_updated()
+
         self._all_controllers = controllers
         if self._clicking_gen is None:
             ctrl = self.handle_hover(controllers)

@@ -6,6 +6,7 @@ from .base import BaseTool
 
 
 class Move(BaseTool):
+    KEEP_SELECTION = True
 
     def handle_hover(self, controllers):
         for ctrl in controllers:
@@ -128,6 +129,14 @@ class Move(BaseTool):
             move_vertices[v] = True
         if not move_vertices:
             return None
+
+        common_vertices = False
+        for edge in self.app.selected_edges:
+            common_vertices = common_vertices or edge.v1 in move_vertices or edge.v2 in move_vertices
+        if common_vertices:
+            for edge in self.app.selected_edges:
+                move_vertices[edge.v1] = True
+                move_vertices[edge.v2] = True
 
         self.move_vertices = move_vertices
         self.move_edges = set([edge for edge in self.app.model.edges

@@ -22,6 +22,7 @@ class App(object):
         self.redoable_actions = []
         self.manual_tokens = weakref.WeakKeyDictionary()
         self.next_manual_token = 1
+        self.selected_edges = set()
 
     def display(self, worldobj):
         if worldobj not in self.pending_updates_seen:
@@ -43,7 +44,13 @@ class App(object):
 
     def _add_edge_or_face(self, edge_or_face):
         if isinstance(edge_or_face, model.Edge):
-            wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2, 0x101010)   # very dark
+            for e1 in self.selected_edges:
+                if ((e1.v1 == edge_or_face.v1 and e1.v2 == edge_or_face.v2) or
+                    (e1.v1 == edge_or_face.v2 and e1.v2 == edge_or_face.v1)):
+                    wo = worldobj.SelectedStem(edge_or_face.v1, edge_or_face.v2)
+                    break
+            else:
+                wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2, 0x101010)    # very dark
         elif isinstance(edge_or_face, model.Face):
             wo = worldobj.Polygon([edge.v1 for edge in edge_or_face.edges])
         else:
@@ -54,6 +61,12 @@ class App(object):
     def _remove_edge_or_face(self, edge_or_face):
         wo = self.model2worldobj.pop(edge_or_face)
         self.destroy(wo)
+
+    def selection_updated(self):
+        for edge in self.model.edges:
+            self._remove_edge_or_face(edge)
+        for edge in self.model.edges:
+            self._add_edge_or_face(edge)
 
     def execute_step(self, model_step):
         model_step.consolidate(self)

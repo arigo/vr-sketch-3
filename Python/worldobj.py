@@ -69,6 +69,15 @@ class EraserPointer(RectanglePointer):
 class PencilPointer(RectanglePointer):
     _kind = 205
 
+class SelectPointer(RectanglePointer):
+    _kind = 206
+
+class SelectPointerPlus(RectanglePointer):
+    _kind = 207
+
+class SelectPointerMinus(RectanglePointer):
+    _kind = 208
+
 
 class Stem(WorldObject):
     _kind = 251
@@ -93,6 +102,13 @@ class Cylinder(Stem):
 
 class DashedStem(Stem):
     _kind = 252
+
+
+class SelectedStem(Stem):
+    _kind = 253
+
+    def __init__(self, end1, end2):
+        Stem.__init__(self, end1, end2, 0)   # color is unused
 
 
 def _text2raw(text):

@@ -21,10 +21,13 @@ public class CylinderObject : WorldObject
         if (p1 != p2)
             transform.localRotation = Quaternion.LookRotation(p2 - p1) * Quaternion.LookRotation(Vector3.up);
 
-        foreach (var rend in GetComponentsInChildren<MeshRenderer>())
+        if (kind != WorldScript.Kind.SelectedStem)
         {
-            rend.material.color = col;
-            Color swap = col; col = col2; col2 = swap;
+            foreach (var rend in GetComponentsInChildren<MeshRenderer>())
+            {
+                rend.material.color = col;
+                Color swap = col; col = col2; col2 = swap;
+            }
         }
     }
 }

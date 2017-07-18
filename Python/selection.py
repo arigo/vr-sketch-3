@@ -32,6 +32,8 @@ class TargetColorScheme:
     FACE   = 0x80FF80
     DARKER_EDGE = 0x00A000
 
+ADD_COLOR = 0x40FF40
+SELECTED_COLOR = 0xC070CF
 DELETE_COLOR = 0xFF364B
 
 
@@ -60,6 +62,9 @@ class SelectVertex(object):
 
     def individual_vertices(self):
         return [self.position]
+
+    def individual_edges(self):
+        return []
 
 
 def all_45degree_guides(position):
@@ -129,6 +134,9 @@ class SelectAlongEdge(object):
     def individual_vertices(self):
         return [self.edge.v1, self.edge.v2]
 
+    def individual_edges(self):
+        return [self.edge]
+
 
 class SelectOnFace(object):
     def __init__(self, app, face, position):
@@ -159,6 +167,9 @@ class SelectOnFace(object):
     def individual_vertices(self):
         return [edge.v1 for edge in self.face.edges]
 
+    def individual_edges(self):
+        return self.face.edges
+
 
 class SelectVoid(object):
     def __init__(self, app, position):
@@ -184,6 +195,9 @@ class SelectVoid(object):
         return []
 
     def individual_vertices(self):
+        return []
+
+    def individual_edges(self):
         return []
 
 

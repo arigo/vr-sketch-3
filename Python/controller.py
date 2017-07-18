@@ -32,14 +32,14 @@ class Controller(object):
 
 
 class ControllersMgr(object):
-    TOOLS = ["Eraser", "Line", "Rectangle", "Move"]
+    TOOLS = ["Select", "Eraser", "Line", "Rectangle", "Move"]
     TOOL_NAMES = {"Line": "Draw Line/Face"}
 
     def __init__(self, app):
         self.app = app
         self.controllers = []
         self.tool = None
-        self.load_tool("Line")
+        self.load_tool("Select")
 
     def load_tool(self, name):
         module = __import__("tools.%s" % (name.lower(),), None, None, [name])

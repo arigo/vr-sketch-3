@@ -19,9 +19,13 @@ public class WorldScript : MonoBehaviour
         MovePointer = 203,
         EraserPointer = 204,
         PencilPointer = 205,
+        SelectPointer = 206,
+        SelectPointerPlus = 207,
+        SelectPointerMinus = 208,
         Cylinder = 250,
         Stem = 251,
         DashedStem = 252,
+        SelectedStem = 253,
     };
 
     public delegate void SignalErrorDelegate([In, MarshalAs(UnmanagedType.LPWStr)] string error);
