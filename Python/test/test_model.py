@@ -4,14 +4,11 @@ from util import *
 from model import *
 
 
-RECORD = {}
-RECORD[0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1] = (0.0, 0.0, 1.0, 1.0)
-
 def fake_approx_plane(lst):
-    try:
-        return RECORD[tuple(lst)]
-    except KeyError:
-        raise AssertionError("missing RECORD for approx_plane: %r" % (lst,))
+    assert len(lst) >= 3
+    for z in lst[2 : len(lst) : 3]:
+        assert z == 1.0, "missing approx_plane: %r" % (lst,)
+    return (0., 0., 1., 1.)
 
 def setup_module(mod):
     import util
@@ -49,6 +46,20 @@ def test_intersect_edge():
     assert e3.intersect_edge(e1) is None
     assert e2.intersect_edge(e3) is None
     assert e3.intersect_edge(e2) is None
+
+
+def test_point_is_inside():
+    v1 = Vector3(0, 0, 1)
+    v2 = Vector3(1, 0, 1)
+    v3 = Vector3(1, 1, 1)
+    v4 = Vector3(0, 1, 1)
+    v5 = Vector3(0.5, 0.5, 1)
+    f = Face([Edge(v2, v3),
+              Edge(v3, v4),
+              Edge(v4, v1),
+              Edge(v1, v5),
+              Edge(v5, v2)])
+    assert not f.point_is_inside(Vector3(0.5, 0, 1))
 
 
 def test_consolidate_subdivide_edges():
@@ -94,3 +105,34 @@ def test_consolidate_subdivide_edges():
     assert step.fe_add[5].v2 == Vector3(0  , 1, 1)    #  |  |  |
                                                       #  |  |  |
                                                       #  +XX---+
+
+def test_consolidate_subdivide_face():
+    model = test_initial_rectangle()
+    v1 = Vector3(0, 0, 1)
+    v2 = Vector3(1, 1, 1)
+    step = ModelStep(model, "Split in two along the diagonal")
+    step.add_edge(v1, v2)
+    while step.consolidate_subdivide_faces():
+        pass
+    
+    assert len(step.fe_remove) == 1
+    assert len([fe for fe in step.fe_add if isinstance(fe, Face)]) == 2
+    assert len([fe for fe in step.fe_add if isinstance(fe, Edge)]) == 2
+
+def test_consolidate_subdivide_face_2():
+    model = test_initial_rectangle()
+    v1 = Vector3(0, 0, 1)
+    v2 = Vector3(.5, .5, 1)
+    v3 = Vector3(1, 0, 1)
+    step = ModelStep(model, "Split by adding a triangle along one edge")
+    step.add_edge(v1, v2)
+    step.add_edge(v2, v3)
+    r = step.consolidate_subdivide_faces()
+    assert r is True
+    
+    assert len(step.fe_remove) == 1
+    assert len([fe for fe in step.fe_add if isinstance(fe, Face)]) == 2
+    assert len([fe for fe in step.fe_add if isinstance(fe, Edge)]) == 4
+
+    r = step.consolidate_subdivide_faces()
+    assert r is False

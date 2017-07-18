@@ -262,7 +262,7 @@ class Plane(AffineSubspace):
         for v in vertices:
             lst += v.tolist()
         result = _approx_plane(lst)
-        return Plane(Vector3(result[0], result[1], result[2]), result[3])
+        return Plane(Vector3(result[0], result[1], result[2]), -result[3])
 
     @staticmethod
     def from_point_and_normal(from_point, normal):

@@ -1,10 +1,14 @@
-from util import Vector3, Plane, Line, SinglePoint, EPSILON, EmptyIntersection
+import math
+from util import Vector3, Plane, Line, SinglePoint, EPSILON, EmptyIntersection, GeometryDict
 
 
 class Edge(object):
     def __init__(self, v1, v2):
         self.v1 = v1
         self.v2 = v2
+
+    def __repr__(self):
+        return '<Edge 0x%x: %r - %r>' % (id(self), self.v1, self.v2)
 
     def measure_distance(self, position):
         # returns (fraction along the edge, distance from the line supporting the edge)
@@ -51,11 +55,17 @@ class Edge(object):
                 return point
         return None
 
+    def in_plane(self, plane):
+        return plane.distance_to_point(self.v1) < EPSILON and plane.distance_to_point(self.v2) < EPSILON
+
 
 class Face(object):
     def __init__(self, edges):
         self.edges = edges
         self._update_plane()
+
+    def __repr__(self):
+        return '<Face 0x%x: %r>' % (id(self), ' - '.join([repr(e.v1) for e in self.edges]))
 
     def _update_plane(self):
         # check invariants
@@ -277,6 +287,113 @@ class ModelStep(object):
                         progress = True
         return progress
 
+    def _consolidate_subdivide_face(self, face, edge):
+        if face in self.fe_remove or edge in self.fe_remove:
+            return False
+        if not edge.in_plane(face.plane):
+            return False
+        face_vertices = [e.v1 for e in face.edges]
+        try:
+            i1 = face_vertices.index(edge.v1)
+        except ValueError:
+            i1 = -1
+        try:
+            i2 = face_vertices.index(edge.v2)
+        except ValueError:
+            i2 = -1
+        if i1 < 0 and i2 < 0:
+            return False
+        if i1 >= 0 and i2 >= 0 and abs(i1 - i2) in [0, 1, len(face_vertices) - 1]:
+            return False
+
+        if i1 >= 0:
+            current_branch = [edge.v1, edge.v2]
+        else:
+            current_branch = [edge.v2, edge.v1]
+        if not face.point_is_inside((edge.v1 + edge.v2) * 0.5):
+            return False
+        seen_points = GeometryDict()
+        all_edges = self._all_active_edges()
+        choices = []
+
+        while True:
+            head = current_branch[-1]
+            if head in face_vertices:
+                break   # connecting back!
+            seen_points[head] = True
+
+            tails = []
+            v_step = head - current_branch[-2]
+            v_ortho = v_step.cross(face.plane.normal)
+
+            def see(v):
+                if v not in seen_points and face.plane.distance_to_point(v) < EPSILON:
+                    if len(current_branch) == 2 and v == current_branch[0]:
+                        return
+                    v_next = v - head
+                    y = v_step.dot(v_next)
+                    x = v_ortho.dot(v_next)
+                    tails.append((math.atan2(x, y), v))
+
+            for e in all_edges:
+                if e.v1 == head:
+                    see(e.v2)
+                elif e.v2 == head:
+                    see(e.v1)
+            tails.sort()
+
+            while not tails:
+                if not choices:
+                    return False    # did not manage to connect back
+                tails = choices.pop()
+                current_branch.pop()
+
+            choices.append(tails)
+            _, next_head = tails.pop()
+            current_branch.append(next_head)
+
+        # we can split the face in two along the points in 'current_branch',
+        # which is a list of points starting at a vertex of 'face', and ending
+        # at a (generally different) vertex of 'face'.
+        i1 = face_vertices.index(current_branch[0])
+        i2 = face_vertices.index(current_branch[-1])
+        edges1 = []
+        edges2 = []
+        target = edges1
+        i = i1
+        for _ in range(len(face.edges)):
+            if i == i2:
+                target = edges2
+            target.append(face.edges[i])
+            i = (i + 1) % len(face.edges)
+
+        for k in range(len(current_branch) - 1, 0, -1):
+            edges1.append(self.add_edge(current_branch[k], current_branch[k - 1]))
+
+        for k in range(len(current_branch) - 1):
+            edges2.append(self.add_edge(current_branch[k], current_branch[k + 1]))
+
+        try:
+            self.fe_add.remove(face)
+        except ValueError:
+            self.fe_remove.add(face)
+        self.add_face(edges1)
+        self.add_face(edges2)
+        return True
+
+    def consolidate_subdivide_faces(self):
+        progress = False
+        all_faces = self._all_active_faces()
+        all_edges = self._all_active_edges()
+        for fe in self.fe_add:
+            if isinstance(fe, Edge):
+                for face in all_faces:
+                    progress |= self._consolidate_subdivide_face(face, fe)
+            elif isinstance(fe, Face):
+                for edge in all_edges:
+                    progress |= self._consolidate_subdivide_face(fe, edge)
+        return progress
+
     def consolidate(self, app):
         # - remove zero-length edges, and zero-edges faces
         self.consolidate_temporary()
@@ -286,7 +403,8 @@ class ModelStep(object):
             pass
 
         # - subdivide faces if there are new edges in the middle of them
-        # XXX NOT IMPLEMENTED YET
+        while self.consolidate_subdivide_faces():
+            pass
 
         # - remove duplicate edges and faces
         # XXX NOT IMPLEMENTED YET
