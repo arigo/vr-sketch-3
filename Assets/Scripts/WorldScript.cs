@@ -174,12 +174,14 @@ public class WorldScript : MonoBehaviour
             });
         }
         var dialog = menu.MakePopup(active_controllers[controller_num], gameObject);
-        dialog.scrollWholeDialog = false;
-        dialog.touchpadTouchAct = false;
         if (dialog == null)
             current_dialog = null;
         else
+        {
+            dialog.scrollWholeDialog = false;
+            dialog.touchpadTouchAct = false;
             current_dialog = dialog.gameObject;
+        }
     }
 
     private void Start()
