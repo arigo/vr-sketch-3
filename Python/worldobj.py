@@ -78,6 +78,9 @@ class SelectPointerPlus(RectanglePointer):
 class SelectPointerMinus(RectanglePointer):
     _kind = 208
 
+class PushPullPointer(RectanglePointer):
+    _kind = 209
+
 
 class Stem(WorldObject):
     _kind = 251

@@ -32,18 +32,19 @@ class Controller(object):
 
 
 class ControllersMgr(object):
-    TOOLS = ["Select", "Eraser", "Line", "Rectangle", "Move"]
-    TOOL_NAMES = {"Line": "Draw Line/Face"}
+    TOOLS = ["select", "eraser", "line", "rectangle", "pushpull", "move"]
+    TOOL_NAMES = {"Line": "Draw Line/Face",
+                  "Pushpull": "Push/Pull"}
 
     def __init__(self, app):
         self.app = app
         self.controllers = []
         self.tool = None
-        self.load_tool("Select")
+        self.load_tool("rectangle")
 
     def load_tool(self, name):
-        module = __import__("tools.%s" % (name.lower(),), None, None, [name])
-        ToolCls = getattr(module, name)
+        module = __import__("tools.%s" % name, None, None, [name])
+        ToolCls = getattr(module, name.capitalize())
         if self.tool is not None:
             self.tool.cancel()
         self.tool = ToolCls(self.app)
@@ -92,7 +93,7 @@ class ControllersMgr(object):
 
     def get_tools_menu(self):
         for tool_name in self.TOOLS:
-            text = unicode(self.TOOL_NAMES.get(tool_name, tool_name))
+            text = unicode(self.TOOL_NAMES.get(tool_name, tool_name.capitalize()))
             if tool_name == self.selected_tool:
                 text = u"\u2714 " + text
             yield ('tool_' + tool_name, text)

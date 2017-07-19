@@ -22,6 +22,7 @@ public class WorldScript : MonoBehaviour
         SelectPointer = 206,
         SelectPointerPlus = 207,
         SelectPointerMinus = 208,
+        PushPullPointer = 209,
         Cylinder = 250,
         Stem = 251,
         DashedStem = 252,

@@ -13,34 +13,32 @@ class Eraser(BaseTool):
                         ignore=set([selection.find_closest_vertex]))
             self.app.flash(EraserPointer(closest.get_point()))
 
-            closests = [closest]
+            edges = set()
+            faces = set()
+            all_selected = False
             if isinstance(closest, selection.SelectAlongEdge):
-                if closest.edge in self.app.selected_edges:
-                    closests = [selection.SelectAlongEdge(self.app, edge, 0.5) for edge in self.app.selected_edges]
-
-            for closest in closests:
+                all_selected = closest.edge in self.app.selected_edges
+                edges.add(closest.edge)
+            elif isinstance(closest, selection.SelectOnFace):
+                all_selected = all(edge in self.app.selected_edges for edge in closest.face.edges)
+                faces.add(closest.face)
                 closest.flash_flat(selection.DELETE_COLOR)
+            if all_selected:
+                edges.update(self.app.selected_edges)
+
+            for edge in edges:
+                for face in self.app.model.faces:
+                    if edge in face.edges:
+                        faces.add(face)
+                selection.SelectAlongEdge(self.app, edge, 0.5).flash_flat(selection.DELETE_COLOR)
 
             if ctrl.trigger_pressed():
-                self.action_delete(closests)
+                self.action_delete(edges, faces)
                 return None
 
         return None
 
-    def action_delete(self, closests):
-        edges = set()
-        faces = set()
-        for closest in closests:
-            if isinstance(closest, selection.SelectAlongEdge):
-                edges.add(closest.edge)
-                for face in self.app.model.faces:
-                    if closest.edge in face.edges:
-                        faces.add(face)
-            elif isinstance(closest, selection.SelectOnFace):
-                faces.add(closest.face)
-
-        edges = list(edges)
-        faces = list(faces)
+    def action_delete(self, edges, faces):
         text = []
         if edges:
             text.append("-%d edge%s" % (len(edges), "s" * (len(edges) > 1)))
@@ -50,6 +48,8 @@ class Eraser(BaseTool):
             return
 
         step = ModelStep(self.app.model, ', '.join(text))
-        for fe in edges + faces:
+        for fe in faces:
+            step.remove(fe)
+        for fe in edges:
             step.remove(fe)
         self.app.execute_step(step)
