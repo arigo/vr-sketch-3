@@ -133,9 +133,10 @@ class Move(BaseTool):
         self.app.execute_temporary_step(self.model_step)
 
         # Add the distance hint
-        controller_num = self._all_controllers.index(follow_ctrl)
-        token = self.app.fetch_manual_token(self, "length")
-        self.app.flash(TextHint(p1, p2, distance2text(abs(p2 - p1)), controller_num, token))
+        if p1 != p2:
+            controller_num = self._all_controllers.index(follow_ctrl)
+            token = self.app.fetch_manual_token(self, "length")
+            self.app.flash(TextHint(p1, p2, distance2text(abs(p2 - p1)), controller_num, token))
 
 
     def manual_enter(self, key, new_value):
