@@ -174,6 +174,8 @@ public class WorldScript : MonoBehaviour
             });
         }
         var dialog = menu.MakePopup(active_controllers[controller_num], gameObject);
+        dialog.scrollWholeDialog = false;
+        dialog.touchpadTouchAct = false;
         if (dialog == null)
             current_dialog = null;
         else
@@ -277,7 +279,7 @@ public class WorldScript : MonoBehaviour
             int pressed = 0;
             if (ctrl.triggerPressed) pressed |= 1;
             if (ctrl.gripPressed) pressed |= 2;
-            if (ctrl.menuPressed) pressed |= 4;
+            if (ctrl.touchpadPressed) pressed |= 4;
 
             Vector3 pos = transform.InverseTransformPoint(ctrl.position);
             data[o + 0] = pos.x;
