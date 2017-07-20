@@ -7,6 +7,7 @@
   the complexity of computations (FPS tends to drop after making models with a few dozen faces)
   
 - there's "copy-pasting" which would be convenient
+- finish Push/pull
 - maybe a Push/pull operation that also works on edges, so that you can
   extend an edge into a square face
 
