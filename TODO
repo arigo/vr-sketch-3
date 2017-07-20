@@ -1,0 +1,19 @@
+
+- add some form of tutorials how to use it
+- grouping feature
+- loading/saving of sketchup/dmx files
+
+- test out bugs (there are some), improve py.test testing, and reduce
+  the complexity of computations (FPS tends to drop after making models with a few dozen faces)
+  
+- there's "copy-pasting" which would be convenient
+- maybe a Push/pull operation that also works on edges, so that you can
+  extend an edge into a square face
+
+- multiplayer
+
+- also, middle button should hide the menu
+- when rotating there is no way to see the axes
+- sometimes, the pencil cursor is angled just wrong and it is almost
+  completely hidden inside the geometry
+- allow coloring the faces
