@@ -33,8 +33,8 @@ class Controller(object):
 
 class ControllersMgr(object):
     TOOLS = ["select", "eraser", "line", "rectangle", "pushpull", "move"]
-    TOOL_NAMES = {"Line": "Draw Line/Face",
-                  "Pushpull": "Push/Pull"}
+    TOOL_NAMES = {"line": "Draw Line/Face",
+                  "pushpull": "Push/Pull"}
 
     def __init__(self, app):
         self.app = app

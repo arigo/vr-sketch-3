@@ -1,6 +1,6 @@
-from worldobj import PushPullPointer, DashedStem
+from worldobj import PushPullPointer, DashedStem, CrossPointer
 from model import ModelStep
-from util import Line, WholeSpace
+from util import Line, WholeSpace, Plane
 import selection
 from .base import BaseTool
 
@@ -42,7 +42,35 @@ class Pushpull(BaseTool):
             subspace = orthogonal_guide
             for edge in self.source_face.edges:
                 make_flashes.append(lambda v1=edge.v1:
-                                    DashedStem(v1, v1 + delta, 0xFFF0F0))
+                                    DashedStem(v1, v1 + delta, 0xE6FFE6))
+
+        # If the other controller is over a point position, guide orthgonally.
+        # If it is over a plane, guide to that plane.  If it is over an edge,
+        # guide to that line.
+        if other_ctrl is not None:
+            closest2 = selection.find_closest(self.app, other_ctrl.position)
+            self.app.flash(CrossPointer(closest2.get_point()))
+            ortho = False
+            subspace1 = None
+            if isinstance(closest2, selection.SelectOnFace):
+                subspace1 = closest2.get_subspace()
+            elif isinstance(closest2, selection.SelectAlongEdge):
+                if closest2.fraction == 0.5:
+                    ortho = True
+                else:
+                    subspace1 = closest2.get_subspace()
+            elif isinstance(closest2, selection.SelectVertex):
+                ortho = True
+
+            if ortho:
+                subspace1 = Plane.from_point_and_normal(closest2.get_point(), self.source_face.plane.normal)
+            if subspace1 is not None:
+                try:
+                    subspace = subspace.intersect(subspace1)
+                except EmptyIntersection:
+                    pass
+                else:
+                    make_flashes.append(lambda v1=closest2.get_point(): DashedStem(v1, p2, 0xB8B8B8))
 
         p2 = subspace.project_point_inside(p2)
         delta = p2 - p1
