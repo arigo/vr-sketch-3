@@ -123,6 +123,7 @@ class ModelStep(object):
         self.name = name
         self.fe_remove = set()
         self.fe_add = []
+        self.edge_pairing = []
 
     def apply(self, app):
         for edge_or_face in self.fe_remove:
@@ -130,6 +131,17 @@ class ModelStep(object):
         for edge_or_face in self.fe_add:
             app._add_edge_or_face(edge_or_face)
         self._apply_to_model()
+        #
+        if app.selected_edges:
+            old_selected_edges = app.selected_edges
+            app.selected_edges = set()
+            for edge in app.model.edges:
+                if edge in old_selected_edges:
+                    app.selected_edges.add(edge)
+            for a, b in self.edge_pairing:
+                if a in old_selected_edges:
+                    app.selected_edges.add(b)
+            app.selection_updated()
 
     def _apply_to_model(self):
         fe_remove = self.fe_remove
@@ -147,9 +159,10 @@ class ModelStep(object):
         ms = ModelStep(self.model, self.name)
         ms.fe_remove.update(self.fe_add)
         ms.fe_add.extend(self.fe_remove)
+        ms.edge_pairing = [(b, a) for (a, b) in self.edge_pairing]
         return ms
 
-    def add_edge(self, v1, v2):
+    def add_edge(self, v1, v2, paired_with=None):
         for edge in self.model.edges:
             if edge.v1 == v1 and edge.v2 == v2 and edge not in self.fe_remove:
                 return edge
@@ -158,6 +171,8 @@ class ModelStep(object):
                 return edge
         edge = Edge(v1, v2)
         self.fe_add.append(edge)
+        if paired_with is not None:
+            self.edge_pairing.append((paired_with, edge))
         return edge
 
     def add_face(self, edges):
@@ -180,7 +195,7 @@ class ModelStep(object):
             return v
         # xxx bad complexity here
         for edge in move_edges:
-            edges_old2new[edge] = self.add_edge(map_v(edge.v1), map_v(edge.v2))
+            edges_old2new[edge] = self.add_edge(map_v(edge.v1), map_v(edge.v2), paired_with=edge)
         for face in move_faces:
             edges = [edges_old2new.get(edge, edge) for edge in face.edges]
             self.add_face(edges)
