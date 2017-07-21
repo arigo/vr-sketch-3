@@ -1,4 +1,5 @@
-from worldobj import SelectPointer
+from worldobj import SelectPointer, Stem
+from util import Vector3
 from model import ModelStep
 import selection
 from .base import BaseTool
@@ -24,12 +25,15 @@ class Select(BaseTool):
                 closest.flash_flat(color)
             self.app.flash(SelectPointer(closest.get_point()))
 
-            if edges and ctrl.trigger_pressed():
-                if edges_add:
-                    self.action_add(edges)
+            if ctrl.trigger_pressed():
+                if edges:
+                    if edges_add:
+                        self.action_add(edges)
+                    else:
+                        self.action_remove(edges)
+                    return None
                 else:
-                    self.action_remove(edges)
-                return None
+                    return self.start_box_select(ctrl)
 
         return None
 
@@ -39,4 +43,46 @@ class Select(BaseTool):
 
     def action_remove(self, edges):
         self.app.selected_edges.difference_update(edges)
+        self.app.selection_updated()
+
+    def start_box_select(self, ctrl):
+        self.source_position = ctrl.position
+        return ctrl
+
+    def handle_drag(self, follow_ctrl, other_ctrl=None):
+        source = self.source_position
+        target = follow_ctrl.position
+
+        def show_edge(src, coord_name, newvalue):
+            self.app.flash(Stem(src, src.withcoord(coord_name, newvalue), 0xE040D0))
+
+        show_edge(source, 'x', target.x)
+        show_edge(source.withcoord('y', target.y), 'x', target.x)
+        show_edge(source.withcoord('z', target.z), 'x', target.x)
+        show_edge(source.withcoord('y', target.y).withcoord('z', target.z), 'x', target.x)
+        show_edge(source, 'y', target.y)
+        show_edge(source.withcoord('x', target.x), 'y', target.y)
+        show_edge(source.withcoord('z', target.z), 'y', target.y)
+        show_edge(source.withcoord('x', target.x).withcoord('z', target.z), 'y', target.y)
+        show_edge(source, 'z', target.z)
+        show_edge(source.withcoord('x', target.x), 'z', target.z)
+        show_edge(source.withcoord('y', target.y), 'z', target.z)
+        show_edge(source.withcoord('x', target.x).withcoord('y', target.y), 'z', target.z)
+
+        x1 = min(source.x, target.x)
+        x2 = max(source.x, target.x)
+        y1 = min(source.y, target.y)
+        y2 = max(source.y, target.y)
+        z1 = min(source.z, target.z)
+        z2 = max(source.z, target.z)
+
+        def in_box(v):
+            return (x1 <= v.x <= x2 and
+                    y1 <= v.y <= y2 and
+                    z1 <= v.z <= z2)
+
+        self.app.selected_edges.clear()
+        for edge in self.app.model.edges:
+            if in_box(edge.v1) and in_box(edge.v2):
+                self.app.selected_edges.add(edge)
         self.app.selection_updated()
