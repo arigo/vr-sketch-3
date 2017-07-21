@@ -1,7 +1,7 @@
 
 - add some form of tutorials how to use it
 - grouping feature
-- loading/saving of sketchup/dmx files
+- loading/saving of sketchup (.skp) files
 
 - test out bugs (there are some), improve py.test testing, and reduce
   the complexity of computations (FPS tends to drop after making models with a few dozen faces)
