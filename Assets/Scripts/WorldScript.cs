@@ -54,7 +54,7 @@ public class WorldScript : MonoBehaviour
 
     /***************************************************************************************************/
 
-    public GameObject distanceKeypadPrefab;
+    public GameObject distanceKeypadPrefab, referential;
 
     List<WorldObject> world_objects;
     Dictionary<Kind, WorldObject> world_prefabs;
@@ -323,6 +323,7 @@ public class WorldScript : MonoBehaviour
             globalcenter = grip_first.position + delta * 0.5f;
         }
         grip_localcenter = transform.InverseTransformPoint(globalcenter);
+        referential.SetActive(true);
     }
 
     private void Gt_onGripDrag(Controller controller)
@@ -357,5 +358,7 @@ public class WorldScript : MonoBehaviour
 
         if (grip_first != null)
             Gt_onGripDown(grip_first);
+        else
+            referential.SetActive(false);
     }
 }
