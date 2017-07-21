@@ -54,7 +54,7 @@ class Select(BaseTool):
         target = follow_ctrl.position
 
         def show_edge(src, coord_name, newvalue):
-            self.app.flash(Stem(src, src.withcoord(coord_name, newvalue), 0xE040D0))
+            self.app.flash(Stem(src, src.withcoord(coord_name, newvalue), 0xC040FF))
 
         show_edge(source, 'x', target.x)
         show_edge(source.withcoord('y', target.y), 'x', target.x)
