@@ -102,7 +102,10 @@ class Vector3(object):
             return None
 
     def project_orthogonal(self, normal):
-        return self - normal * normal.dot(self) / float(normal.dot(normal))
+        return self - self.project_on_axis(normal)
+
+    def project_on_axis(self, axis):
+        return axis * axis.dot(self) / float(axis.dot(axis))
 
     def _v_hash0(self):
         # goal: return a number whose integer part is used as hash in GeometryDict.

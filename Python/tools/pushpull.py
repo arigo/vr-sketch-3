@@ -40,9 +40,10 @@ class Pushpull(BaseTool):
         _, d = orthogonal_guide.selection_distance(self.app, p2)
         if d <= 1.0:
             subspace = orthogonal_guide
-            for edge in self.source_face.edges:
-                make_flashes.append(lambda v1=edge.v1:
-                                    DashedStem(v1, v1 + delta, 0xE6FFE6))
+        for edge in self.source_face.edges:
+            def _get_dashed_stem(v1=edge.v1):
+                return DashedStem(v1, v1 + delta.project_on_axis(self.source_face.plane.normal), 0xE6FFE6)
+            make_flashes.append(_get_dashed_stem)
 
         # If the other controller is over a point position, guide orthgonally.
         # If it is over a plane, guide to that plane.  If it is over an edge,
@@ -80,6 +81,8 @@ class Pushpull(BaseTool):
             self.app.flash(mf())
 
         self.model_step = ModelStep(self.app.model, "Push/Pull")
+        if self.remove_original_face:
+            self.model_step.fe_remove.add(self.source_face)
         new_edges = [self.model_step.add_edge(new_vertices[i + 1], new_vertices[i])
                      for i in range(-len(new_vertices), 0)]
         self.model_step.add_face(new_edges[::-1])
@@ -96,4 +99,19 @@ class Pushpull(BaseTool):
         self.source_position = closest.get_point()
         self.source_face = closest.face
         self.model_step = ModelStep(self.app.model, "No movement")
+
+        self.remove_original_face = True
+        for edge in self.source_face.edges:
+            found_continuation_face = False
+            for face in self.app.model.faces:
+                if face == self.source_face:
+                    continue
+                for e1 in face.edges:
+                    if ((e1.v1 == edge.v1 and e1.v2 == edge.v2) or
+                        (e1.v1 == edge.v2 and e1.v2 == edge.v1)):
+                        found_continuation_face = True
+            if not found_continuation_face:
+                self.remove_original_face = False
+                break
+
         return ctrl
