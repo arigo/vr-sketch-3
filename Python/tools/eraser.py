@@ -27,9 +27,6 @@ class Eraser(BaseTool):
                 edges.update(self.app.selected_edges)
 
             for edge in edges:
-                for face in self.app.model.faces:
-                    if edge in face.edges:
-                        faces.add(face)
                 selection.SelectAlongEdge(self.app, edge, 0.5).flash_flat(selection.DELETE_COLOR)
 
             if ctrl.trigger_pressed():
@@ -42,6 +39,17 @@ class Eraser(BaseTool):
         text = []
         if edges:
             text.append("-%d edge%s" % (len(edges), "s" * (len(edges) > 1)))
+
+        for edge in list(edges):
+            for e1 in self.app.model.edges:
+                if ((edge.v1 == e1.v1 and edge.v2 == e1.v2) or
+                    (edge.v1 == e1.v2 and edge.v2 == e1.v1)):
+                    edges.add(e1)
+        for edge in edges:
+            for face in self.app.model.faces:
+                if edge in face.edges:
+                    faces.add(face)
+
         if faces:
             text.append("-%d face%s" % (len(faces), "s" * (len(faces) > 1)))
         if len(text) == 0:
