@@ -1,4 +1,5 @@
 from worldobj import PushPullPointer, DashedStem, CrossPointer
+from worldobj import TextHint, distance2text
 from model import ModelStep
 from util import Line, WholeSpace, Plane, EmptyIntersection
 import selection
@@ -44,6 +45,15 @@ class Pushpull(BaseTool):
             def _get_dashed_stem(v1=edge.v1):
                 return DashedStem(v1, v1 + delta.project_on_axis(self.source_face.plane.normal), 0xE6FFE6)
             make_flashes.append(_get_dashed_stem)
+
+        # Apply the fixed distance, if any
+        if self.fixed_distance is not None:
+            fixed_dist = self.fixed_distance
+            plane = Plane.from_point_and_normal(p1, self.source_face.plane.normal)
+            if plane.signed_distance_to_point(p2) < 0:
+                fixed_dist = -fixed_dist
+            plane = plane.shifted(fixed_dist * self.source_face.plane.normal)
+            subspace = subspace.intersect(plane)   # should not raise EmptyIntersection here
 
         # If the other controller is over a point position, guide orthgonally.
         # If it is over a plane, guide to that plane.  If it is over an edge,
@@ -95,7 +105,19 @@ class Pushpull(BaseTool):
 
         self.app.execute_temporary_step(self.model_step)
 
+        # Add the distance hint
+        controller_num = self._all_controllers.index(follow_ctrl)
+        token = self.app.fetch_manual_token(self, "length")
+        dist = Plane.from_point_and_normal(p1, self.source_face.plane.normal).signed_distance_to_point(p2)
+        p2o = p1 + self.source_face.plane.normal * dist
+        self.app.flash(TextHint(p1, p2o, distance2text(abs(p2o - p1)), controller_num, token))
+
+    def manual_enter(self, key, new_value):
+        assert key == "length"
+        self.fixed_distance = new_value
+
     def start_push_pull(self, ctrl, closest):
+        self.fixed_distance = None
         self.source_position = closest.get_point()
         self.source_face = closest.face
         self.model_step = ModelStep(self.app.model, "No movement")
