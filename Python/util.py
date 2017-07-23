@@ -227,6 +227,13 @@ class AffineSubspace(object):
         d = app.scale_ctrl(self.distance_to_point(pt)) / self._SELECTION_DISTANCE
         return (self._DIMENSIONALITY, d)
 
+    def contains(self, other_subspace):
+        try:
+            i = self.intersect(other_subspace)
+        except EmptyIntersection:
+            return False
+        return i._DIMENSIONALITY == other_subspace._DIMENSIONALITY
+
 
 class EmptyIntersection(Exception):
     pass

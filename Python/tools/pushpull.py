@@ -55,27 +55,24 @@ class Pushpull(BaseTool):
             plane = plane.shifted(fixed_dist * self.source_face.plane.normal)
             subspace = subspace.intersect(plane)   # should not raise EmptyIntersection here
 
-        # If the other controller is over a point position, guide orthgonally.
-        # If it is over a plane, guide to that plane.  If it is over an edge,
-        # guide to that line.
+        # If the other controller is over a position, guide orthogonally.
         if other_ctrl is not None:
             closest2 = selection.find_closest(self.app, other_ctrl.position)
             self.app.flash(CrossPointer(closest2.get_point()))
-            ortho = False
-            subspace1 = None
-            if isinstance(closest2, selection.SelectOnFace):
-                subspace1 = closest2.get_subspace()
-            elif isinstance(closest2, selection.SelectAlongEdge):
-                if closest2.fraction == 0.5:
-                    ortho = True
-                else:
-                    subspace1 = closest2.get_subspace()
-            elif isinstance(closest2, selection.SelectVertex):
-                ortho = True
-
-            if ortho:
-                subspace1 = Plane.from_point_and_normal(closest2.get_point(), self.source_face.plane.normal)
-            if subspace1 is not None:
+            #ortho = False
+            #subspace1 = None
+            #if isinstance(closest2, selection.SelectOnFace):
+            #    subspace1 = closest2.get_subspace()
+            #elif isinstance(closest2, selection.SelectAlongEdge):
+            #    if closest2.fraction == 0.5:
+            #        ortho = True
+            #    else:
+            #        subspace1 = closest2.get_subspace()
+            #elif isinstance(closest2, selection.SelectVertex):
+            #    ortho = True
+            #
+            subspace1 = Plane.from_point_and_normal(closest2.get_point(), self.source_face.plane.normal)
+            if subspace1.contains(closest2.get_subspace()):
                 try:
                     subspace = subspace.intersect(subspace1)
                 except EmptyIntersection:
