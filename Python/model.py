@@ -58,6 +58,10 @@ class Edge(object):
     def in_plane(self, plane):
         return plane.distance_to_point(self.v1) < EPSILON and plane.distance_to_point(self.v2) < EPSILON
 
+    def point_is_inside(self, point):
+        frac, distance = self.measure_distance(point)
+        return -EPSILON < frac < 1 + EPSILON and distance < EPSILON
+
 
 class Face(object):
     def __init__(self, edges):
@@ -325,8 +329,12 @@ class ModelStep(object):
             current_branch = [edge.v1, edge.v2]
         else:
             current_branch = [edge.v2, edge.v1]
-        if not face.point_is_inside((edge.v1 + edge.v2) * 0.5):
+        middle = (edge.v1 + edge.v2) * 0.5
+        if not face.point_is_inside(middle):
             return False
+        for e in face.edges:
+            if e.point_is_inside(middle):
+                return False
         seen_points = GeometryDict()
         all_edges = self._all_active_edges()
         choices = []
@@ -417,6 +425,8 @@ class ModelStep(object):
         return progress
 
     def consolidate(self, app):
+        #self._dump()
+
         # - remove zero-length edges, and zero-edges faces
         self.consolidate_temporary()
 
@@ -435,6 +445,7 @@ class ModelStep(object):
 
         # - remove the caches
         self.model.caches.clear()
+        #self._dump()
 
     def check_valid(self):
         # - assert that all the edges of the faces are present
@@ -459,3 +470,16 @@ class ModelStep(object):
                 assert fe not in self.model.edges
             else:
                 raise TypeError(type(fe))
+
+    _DUMP_NEXT = 0
+    def _dump(self):
+        filename = 'dump%d.txt' % ModelStep._DUMP_NEXT
+        ModelStep._DUMP_NEXT += 1
+        with open(filename, 'w') as f:
+            print >> f, 'Remove:'
+            for fe in self.fe_remove:
+                print >> f, repr(fe)
+            print >> f
+            print >> f, 'Add:'
+            for fe in self.fe_add:
+                print >> f, repr(fe)
