@@ -1,6 +1,6 @@
 from worldobj import PushPullPointer, DashedStem, CrossPointer
 from model import ModelStep
-from util import Line, WholeSpace, Plane
+from util import Line, WholeSpace, Plane, EmptyIntersection
 import selection
 from .base import BaseTool
 
