@@ -166,6 +166,7 @@ class Move(BaseTool):
 
         # compute the subspace inside which it's ok to move: we must not make any 
         # existing face non-planar
+        self.source_position = closest.get_subspace().project_point_inside(ctrl.position)
         subspace = WholeSpace()
 
         for face in self.app.model.faces:
@@ -190,13 +191,13 @@ class Move(BaseTool):
             for position in vertices:
                 if plane.distance_to_point(position) > EPSILON:
                     # no => can't move off 'face.plane', then
+                    plane = Plane.from_point_and_normal(self.source_position, face.plane.normal)
                     try:
-                        subspace = subspace.intersect(face.plane)
+                        subspace = subspace.intersect(plane)
                     except EmptyIntersection:
                         return None
                     break
 
-        self.source_position = closest.get_subspace().project_point_inside(ctrl.position)
         self.initial_selection_guides = (list(closest.alignment_guides()) + 
                                          list(selection.all_45degree_guides(self.source_position)))
         self.subspace = subspace
