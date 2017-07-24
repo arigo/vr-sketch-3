@@ -168,7 +168,7 @@ public class WorldScript : MonoBehaviour
         var menu = new Menu();
         foreach (var line in menu_string.Split('\n'))
         {
-            int colon = line.IndexOf(':');
+            int colon = line.IndexOf('\t');
             menu.Add(line.Substring(colon + 1), () => {
                 if (pyunityvr_click(line.Substring(0, colon)) != 42)
                     Debug.LogError("pyunityvr_click() failed!");

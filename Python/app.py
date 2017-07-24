@@ -1,5 +1,6 @@
+import os
 import weakref
-import util, model, controller, worldobj
+import util, model, controller, worldobj, document
 from util import Vector3
 
 
@@ -8,21 +9,27 @@ KIND_DESTROYED = 0
 
 class App(object):
 
-    def __init__(self):
+    def __init__(self, initial_filename):
         self.freelists = {}
         self.pending_removes = {}
         self.pending_updates_seen = set()
         self.pending_updates = []
         self.destroy_later = []
         self.num_world_objs = 0
-        self.model = model.Model()
         self.model2worldobj = {}
         self.ctrlmgr = controller.ControllersMgr(self)
-        self.undoable_actions = []
-        self.redoable_actions = []
         self.manual_tokens = weakref.WeakKeyDictionary()
         self.next_manual_token = 1
         self.selected_edges = set()
+        self.open(initial_filename)
+
+    def open(self, filename):
+        newfile = document.VRSketchFile(filename)
+        if hasattr(self, 'file'):
+            self.file.close()
+        self.file = newfile
+        self.model = self.file.model
+        self.model_updated()
 
     def display(self, worldobj):
         if worldobj not in self.pending_updates_seen:
@@ -62,6 +69,16 @@ class App(object):
         wo = self.model2worldobj.pop(edge_or_face)
         self.destroy(wo)
 
+    def model_updated(self):
+        lst = self.model2worldobj.values()
+        self.model2worldobj.clear()
+        for wo in lst:
+            self.destroy(wo)
+        for fe in self.model.edges:
+            self._add_edge_or_face(fe)
+        for fe in self.model.faces:
+            self._add_edge_or_face(fe)
+
     def selection_updated(self):
         for edge in self.model.edges:
             self._remove_edge_or_face(edge)
@@ -71,7 +88,7 @@ class App(object):
     def execute_step(self, model_step):
         model_step.consolidate(self)
         model_step.apply(self)
-        self.record_undoable_action(model_step.reversed())
+        self.file.record_undoable_action(model_step.reversed())
 
     def execute_temporary_step(self, model_step):
         model_step.consolidate_temporary()
@@ -119,27 +136,36 @@ class App(object):
         del self.destroy_later[:]
 
     def handle_click(self, id):
-        if id.startswith("tool_"):
+        if id.startswith(u"tool_"):
             self.ctrlmgr.load_tool(id[5:])
+        elif id.startswith(u"open_"):
+            self.open(id[5:])
         else:
-            getattr(self, '_handle_click_' + id)()
-
-
-    def record_undoable_action(self, undoable_action):
-        del self.redoable_actions[:]
-        self.undoable_actions.append(undoable_action)
+            getattr(self, '_handle_click_' + str(id))()
 
     def _handle_click_undo(self):
-        if self.undoable_actions:
-            self.undoable_actions[-1].apply(self)
-            action = self.undoable_actions.pop()
-            self.redoable_actions.append(action.reversed())
+        self.file.undo_once()
 
     def _handle_click_redo(self):
-        if self.redoable_actions:
-            self.redoable_actions[-1].apply(self)
-            action = self.redoable_actions.pop()
-            self.undoable_actions.append(action.reversed())
+        self.file.redo_once()
+
+    def _handle_click_open(self):
+        lst = []
+        DIR = os.path.dirname(self.file.filename)
+        for fn in os.listdir(DIR):
+            if fn.lower().endswith(u'.vrsketch'):
+                try:
+                    same = os.path.samefile(
+                        os.path.join(DIR, fn),
+                        self.file.filename)
+                except OSError:
+                    same = False
+                text = fn[:-len(u'.vrsketch')]
+                if same:
+                    text = u"\u2714 " + text
+                fn = os.path.join(DIR, fn)
+                lst.append((u'open_%s' % fn, text))
+        self.current_menu_ctrl.show_menu(lst)
 
 
     def fetch_manual_token(self, owner, key):

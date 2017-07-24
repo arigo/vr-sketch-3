@@ -27,7 +27,7 @@ class Controller(object):
 
     def show_menu(self, items):
         # _show_menu() is injected into the globals by app.initialize_functions()
-        s = '\n'.join(['%s:%s' % (id, text) for (id, text) in items])
+        s = '\n'.join(['%s\t%s' % (id, text) for (id, text) in items])
         _show_menu(self._index, s)
 
 
@@ -72,6 +72,7 @@ class ControllersMgr(object):
         # which cancels the tool-specific action, hides cursors, etc.
         for ctrl in self.controllers:
             if ctrl.pressed & ~ctrl.prev_pressed & PRESS_TOUCHPAD:
+                self.app.current_menu_ctrl = ctrl
                 ctrl.show_menu(self.get_tools_menu())
                 return
 
@@ -101,3 +102,4 @@ class ControllersMgr(object):
         ractions = self.app.redoable_actions
         yield ('undo', 'Undo %s' % (uactions[-1].name if uactions else '(nothing)'))
         yield ('redo', 'Redo %s' % (ractions[-1].name if ractions else '(nothing)'))
+        yield ('open', 'Open document...')

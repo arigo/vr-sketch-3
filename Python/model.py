@@ -3,12 +3,19 @@ from util import Vector3, Plane, Line, SinglePoint, EPSILON, EmptyIntersection, 
 
 
 class Edge(object):
-    def __init__(self, v1, v2):
+    _NUMBER = 1
+
+    def __init__(self, v1, v2, eid=None):
         self.v1 = v1
         self.v2 = v2
+        if eid is None:
+            eid = Edge._NUMBER
+        if Edge._NUMBER <= eid:
+            Edge._NUMBER = eid + 1
+        self.eid = eid
 
     def __repr__(self):
-        return '<Edge 0x%x: %r - %r>' % (id(self), self.v1, self.v2)
+        return '<Edge %d: %r - %r>' % (self.eid, self.v1, self.v2)
 
     def measure_distance(self, position):
         # returns (fraction along the edge, distance from the line supporting the edge)
@@ -64,12 +71,19 @@ class Edge(object):
 
 
 class Face(object):
-    def __init__(self, edges):
+    _NUMBER = 1
+
+    def __init__(self, edges, fid=None):
         self.edges = edges
+        if fid is None:
+            fid = Face._NUMBER
+        if Face._NUMBER <= fid:
+            Face._NUMBER = fid + 1
+        self.fid = fid
         self._update_plane()
 
     def __repr__(self):
-        return '<Face 0x%x: %r>' % (id(self), ' - '.join([repr(e.v1) for e in self.edges]))
+        return '<Face %d: %r>' % (self.fid, ' - '.join([repr(e.v1) for e in self.edges]))
 
     def _update_plane(self):
         # check invariants
@@ -127,7 +141,6 @@ class ModelStep(object):
         self.name = name
         self.fe_remove = set()
         self.fe_add = []
-        self.edge_pairing = []
 
     def apply(self, app):
         for edge_or_face in self.fe_remove:
@@ -137,14 +150,13 @@ class ModelStep(object):
         self._apply_to_model()
         #
         if app.selected_edges:
-            old_selected_edges = app.selected_edges
-            app.selected_edges = set()
+            old_sel = set()
+            for edge in app.selected_edges:
+                old_sel.add(edge.eid)
+            app.selected_edges.clear()
             for edge in app.model.edges:
-                if edge in old_selected_edges:
+                if edge.eid in old_sel:
                     app.selected_edges.add(edge)
-            for a, b in self.edge_pairing:
-                if a in old_selected_edges:
-                    app.selected_edges.add(b)
             app.selection_updated()
 
     def _apply_to_model(self):
@@ -163,7 +175,6 @@ class ModelStep(object):
         ms = ModelStep(self.model, self.name)
         ms.fe_remove.update(self.fe_add)
         ms.fe_add.extend(self.fe_remove)
-        ms.edge_pairing = [(b, a) for (a, b) in self.edge_pairing]
         return ms
 
     def add_edge(self, v1, v2, paired_with=None):
@@ -173,10 +184,8 @@ class ModelStep(object):
         for edge in self.fe_add:
             if isinstance(edge, Edge) and edge.v1 == v1 and edge.v2 == v2:
                 return edge
-        edge = Edge(v1, v2)
+        edge = Edge(v1, v2, None if paired_with is None else paired_with.eid)
         self.fe_add.append(edge)
-        if paired_with is not None:
-            self.edge_pairing.append((paired_with, edge))
         return edge
 
     def add_face(self, edges):
