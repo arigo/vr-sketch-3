@@ -54,7 +54,7 @@ class App(object):
                     wo = worldobj.SelectedStem(edge_or_face.v1, edge_or_face.v2)
                     break
             else:
-                wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2, 0x101010)    # very dark
+                wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2)
         elif isinstance(edge_or_face, model.Face):
             wo = worldobj.Polygon([edge.v1 for edge in edge_or_face.edges])
         else:

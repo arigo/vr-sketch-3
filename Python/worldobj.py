@@ -85,7 +85,7 @@ class PushPullPointer(RectanglePointer):
 class Stem(WorldObject):
     _kind = 251
 
-    def __init__(self, end1, end2, color, color2=None):
+    def __init__(self, end1, end2, color=None, color2=None):
         self.end1 = end1
         self.end2 = end2
         self.color = color
@@ -93,9 +93,10 @@ class Stem(WorldObject):
 
     def getrawdata(self):
         lst = self.end1.tolist() + self.end2.tolist()
-        lst.append(self.color)
-        if self.color2 is not None:
-            lst.append(self.color2)
+        if self.color is not None:
+            lst.append(self.color)
+            if self.color2 is not None:
+                lst.append(self.color2)
         return lst
 
 
