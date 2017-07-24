@@ -72,6 +72,7 @@ class Edge(object):
 
 class Face(object):
     _NUMBER = 1
+    _UPDATE_PLANE = True
 
     def __init__(self, edges, fid=None):
         self.edges = edges
@@ -80,7 +81,8 @@ class Face(object):
         if Face._NUMBER <= fid:
             Face._NUMBER = fid + 1
         self.fid = fid
-        self._update_plane()
+        if Face._UPDATE_PLANE:
+            self._update_plane()
 
     def __repr__(self):
         return '<Face %d: %r>' % (self.fid, ' - '.join([repr(e.v1) for e in self.edges]))

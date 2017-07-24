@@ -19,8 +19,7 @@ class VRSketchFile(object):
                 self._load_data(f)
         else:
             with self.openfile('wb+') as f:
-                self._emit_json(f, {"a": HEADER, "version": VERSION})
-                f.write('\n')
+                write_header(f)
             self.populate_initial_model()
 
     def openfile(self, mode):
@@ -38,13 +37,6 @@ class VRSketchFile(object):
             line = line.strip()
             if line:
                 yield (pos, json.loads(line))
-
-    def _emit_json(self, f, entry):
-        line = json.dumps(entry, sort_keys=True)
-        assert '\n' not in line
-        line += '\n'
-        f.write(line)
-        f.flush()
 
 
     def _load_data(self, f):
@@ -100,39 +92,10 @@ class VRSketchFile(object):
 
 
     def _record_undoable_action(self, model_step):
-        entry = {"a": model_step.name}
-
-        if model_step.fe_remove:
-            remove_ids = []
-            for fe in model_step.fe_remove:
-                if isinstance(fe, Edge):
-                    remove_ids.append("e%d" % fe.eid)
-                elif isinstance(fe, Face):
-                    remove_ids.append("f%d" % fe.fid)
-                else:
-                    raise TypeError(type(fe))
-            entry["remove"] = remove_ids
-
-        if model_step.fe_add:
-            adds1 = []
-            adds2 = []
-            for fe in model_step.fe_add:
-                if isinstance(fe, Edge):
-                    adds1.append({"id": "e%d" % fe.eid,
-                                  "v1": fe.v1.tolist(),
-                                  "v2": fe.v2.tolist()})
-                elif isinstance(fe, Face):
-                    edges = ["e%d" % e.eid for e in fe.edges]
-                    adds2.append({"id": "f%d" % fe.fid,
-                                  "edges": edges})
-                else:
-                    raise TypeError(type(fe))
-            entry["add"] = adds1 + adds2
-
         with self.openfile('rb+') as f:
             f.seek(0, 2)
             model_step.file_position = f.tell()
-            self._emit_json(f, entry)
+            write_model_step(f, model_step)
         self.undoable_actions.append(model_step)
 
 
@@ -171,3 +134,46 @@ class VRSketchFile(object):
         step.add_face([e1, e2, e3, e4])
         step._apply_to_model()
         self.record_undoable_action(step)
+
+
+def _emit_json(f, entry):
+    line = json.dumps(entry, sort_keys=True)
+    assert '\n' not in line
+    line += '\n'
+    f.write(line)
+
+def write_header(f):
+    _emit_json(f, {"a": HEADER, "version": VERSION})
+    f.write('\n')
+
+def write_model_step(f, model_step):
+    entry = {"a": model_step.name}
+
+    if model_step.fe_remove:
+        remove_ids = []
+        for fe in model_step.fe_remove:
+            if isinstance(fe, Edge):
+                remove_ids.append("e%d" % fe.eid)
+            elif isinstance(fe, Face):
+                remove_ids.append("f%d" % fe.fid)
+            else:
+                raise TypeError(type(fe))
+        entry["remove"] = remove_ids
+
+    if model_step.fe_add:
+        adds1 = []
+        adds2 = []
+        for fe in model_step.fe_add:
+            if isinstance(fe, Edge):
+                adds1.append({"id": "e%d" % fe.eid,
+                              "v1": fe.v1.tolist(),
+                              "v2": fe.v2.tolist()})
+            elif isinstance(fe, Face):
+                edges = ["e%d" % e.eid for e in fe.edges]
+                adds2.append({"id": "f%d" % fe.fid,
+                              "edges": edges})
+            else:
+                raise TypeError(type(fe))
+        entry["add"] = adds1 + adds2
+
+    _emit_json(f, entry)
