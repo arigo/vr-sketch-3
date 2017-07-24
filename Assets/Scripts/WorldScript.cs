@@ -174,7 +174,13 @@ public class WorldScript : MonoBehaviour
                     Debug.LogError("pyunityvr_click() failed!");
             });
         }
-        var dialog = menu.MakePopup(active_controllers[controller_num], gameObject);
+        GameObject requester = gameObject;
+        if (controller_num >= 1000)
+        {
+            requester = null;
+            controller_num -= 1000;
+        }
+        var dialog = menu.MakePopup(active_controllers[controller_num], requester);
         if (dialog == null)
             current_dialog = null;
         else

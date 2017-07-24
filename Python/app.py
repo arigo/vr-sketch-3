@@ -24,10 +24,7 @@ class App(object):
         self.open(initial_filename)
 
     def open(self, filename):
-        newfile = document.VRSketchFile(filename)
-        if hasattr(self, 'file'):
-            self.file.close()
-        self.file = newfile
+        self.file = document.VRSketchFile(filename)
         self.model = self.file.model
         self.model_updated()
 
@@ -88,7 +85,7 @@ class App(object):
     def execute_step(self, model_step):
         model_step.consolidate(self)
         model_step.apply(self)
-        self.file.record_undoable_action(model_step.reversed())
+        self.file.record_undoable_action(model_step)
 
     def execute_temporary_step(self, model_step):
         model_step.consolidate_temporary()
@@ -144,28 +141,24 @@ class App(object):
             getattr(self, '_handle_click_' + str(id))()
 
     def _handle_click_undo(self):
-        self.file.undo_once()
+        self.file.undo_once(self)
 
     def _handle_click_redo(self):
-        self.file.redo_once()
+        self.file.redo_once(self)
 
     def _handle_click_open(self):
         lst = []
         DIR = os.path.dirname(self.file.filename)
+        NORM = os.path.normpath(self.file.filename)
         for fn in os.listdir(DIR):
             if fn.lower().endswith(u'.vrsketch'):
-                try:
-                    same = os.path.samefile(
-                        os.path.join(DIR, fn),
-                        self.file.filename)
-                except OSError:
-                    same = False
+                fullfn = os.path.join(DIR, fn)
+                same = (NORM == os.path.normpath(fullfn))
                 text = fn[:-len(u'.vrsketch')]
                 if same:
                     text = u"\u2714 " + text
-                fn = os.path.join(DIR, fn)
-                lst.append((u'open_%s' % fn, text))
-        self.current_menu_ctrl.show_menu(lst)
+                lst.append((u'open_%s' % fullfn, text))
+        self.current_menu_ctrl.show_menu(lst, force=True)
 
 
     def fetch_manual_token(self, owner, key):

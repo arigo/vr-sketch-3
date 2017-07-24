@@ -1,3 +1,4 @@
+import os
 import json
 from model import Edge, Face, Model, ModelStep
 from util import Vector3
@@ -14,22 +15,22 @@ class VRSketchFile(object):
         self.undoable_actions = []
         self.redoable_actions = []
         if os.path.exists(filename):
-            self.f = open(filename, 'rb+')
-            self._load_data()
+            with self.openfile('rb') as f:
+                self._load_data(f)
         else:
-            self.f = open(filename, 'wb+')
-            self._emit_json({"a": HEADER, "version": VERSION})
-            self.f.write('\n')
+            with self.openfile('wb+') as f:
+                self._emit_json(f, {"a": HEADER, "version": VERSION})
+                f.write('\n')
             self.populate_initial_model()
 
-    def close(self):
-        self.f.close()
+    def openfile(self, mode):
+        return open(self.filename, mode)
 
-    def _enum_json(self):
-        self.f.seek(0)
+    def _enum_json(self, f):
+        f.seek(0)
         while True:
-            pos = self.f.tell()
-            line = self.f.readline()
+            pos = f.tell()
+            line = f.readline()
             if not line:
                 break
             if not line.endswith('\n'):
@@ -38,18 +39,18 @@ class VRSketchFile(object):
             if line:
                 yield (pos, json.loads(line))
 
-    def _emit_json(self, entry):
+    def _emit_json(self, f, entry):
         line = json.dumps(entry, sort_keys=True)
         assert '\n' not in line
         line += '\n'
-        self.f.write(line)
-        self.f.flush()
+        f.write(line)
+        f.flush()
 
 
-    def _load_data(self):
+    def _load_data(self, f):
         # assumes an empty 'self.model' and 'self.undoable_actions',
         # and fill them by loading the file
-        enum = self._enum_json()
+        enum = self._enum_json(f)
         _, header = next(enum)
         if header.get("a") != HEADER:
             raise ValueError(header.get("a"))
@@ -67,7 +68,7 @@ class VRSketchFile(object):
                         item = edges_by_eid[eid]
                     elif remove_id.startswith('f'):
                         fid = int(remove_id[1:])
-                        item = faces_by_eid[fid]
+                        item = faces_by_fid[fid]
                     else:
                         raise ValueError(remove_id)
                     model_step.fe_remove.add(item)
@@ -87,7 +88,7 @@ class VRSketchFile(object):
                         for edge_id in add1["edges"]:
                             assert edge_id.startswith('e')
                             eid = int(edge_id[1:])
-                            edges.append(edges_by_id[eid])
+                            edges.append(edges_by_eid[eid])
                         item = Face(edges, fid=fid)
                         faces_by_fid[fid] = item
                     else:
@@ -128,9 +129,10 @@ class VRSketchFile(object):
                     raise TypeError(type(fe))
             entry["add"] = adds1 + adds2
 
-        self.f.seek(0, 2)
-        model_step.file_position = self.f.tell()
-        self._emit_json(entry)
+        with self.openfile('rb+') as f:
+            f.seek(0, 2)
+            model_step.file_position = f.tell()
+            self._emit_json(f, entry)
         self.undoable_actions.append(model_step)
 
 
@@ -138,20 +140,21 @@ class VRSketchFile(object):
         del self.redoable_actions[:]
         self._record_undoable_action(model_step)
 
-    def undo_once(self):
+    def undo_once(self, app):
         if self.undoable_actions:
             model_step = self.undoable_actions[-1]
-            self.f.seek(model_step.file_position)
-            model_step_rev = model_step.reversed()
-            model_step_rev._apply_to_model()
-            self.f.truncate()
+            with self.openfile('rb+') as f:
+                f.seek(model_step.file_position)
+                model_step_rev = model_step.reversed()
+                model_step_rev.apply(app)
+                f.truncate()
             self.undoable_actions.pop()
             self.redoable_actions.append(model_step)
 
-    def redo_once(self):
+    def redo_once(self, app):
         if self.redoable_actions:
             model_step = self.redoable_actions[-1]
-            model_step._apply_to_model()
+            model_step.apply(app)
             self.redoable_actions.pop()
             self._record_undoable_action(model_step)
 

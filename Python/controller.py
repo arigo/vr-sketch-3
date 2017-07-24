@@ -25,10 +25,10 @@ class Controller(object):
     def is_trigger_down(self):
         return self.pressed & PRESS_TRIGGER
 
-    def show_menu(self, items):
+    def show_menu(self, items, force):
         # _show_menu() is injected into the globals by app.initialize_functions()
         s = '\n'.join(['%s\t%s' % (id, text) for (id, text) in items])
-        _show_menu(self._index, s)
+        _show_menu(self._index + (1000 if force else 0), s)
 
 
 class ControllersMgr(object):
@@ -73,7 +73,7 @@ class ControllersMgr(object):
         for ctrl in self.controllers:
             if ctrl.pressed & ~ctrl.prev_pressed & PRESS_TOUCHPAD:
                 self.app.current_menu_ctrl = ctrl
-                ctrl.show_menu(self.get_tools_menu())
+                ctrl.show_menu(self.get_tools_menu(), force=False)
                 return
 
         # this just adds a gray-black cylinder between the two controllers when both grips
@@ -98,8 +98,8 @@ class ControllersMgr(object):
             if tool_name == self.selected_tool:
                 text = u"\u2714 " + text
             yield ('tool_' + tool_name, text)
-        uactions = self.app.undoable_actions
-        ractions = self.app.redoable_actions
+        uactions = self.app.file.undoable_actions
+        ractions = self.app.file.redoable_actions
         yield ('undo', 'Undo %s' % (uactions[-1].name if uactions else '(nothing)'))
         yield ('redo', 'Redo %s' % (ractions[-1].name if ractions else '(nothing)'))
         yield ('open', 'Open document...')
