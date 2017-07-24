@@ -6,6 +6,9 @@ from util import Vector3
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
+SCALE = 0.0254     # inches inside .skp files...
+
+
 ffi = cffi.FFI()
 ffi.cdef("""
     enum SUResult {
@@ -85,7 +88,7 @@ def load(filename):
     err(lib.SUEntitiesGetFaces(entitiesref, numfaces, faces, retrieved_p))
     retrieved = retrieved_p[0]
 
-    position_p = ffi.new("struct SUPoint3D[1]")
+    position_p = ffi.new("struct SUPoint3D *")
 
     for i in range(retrieved):
         loopref_p = ffi.new("SULoopRef[1]")
@@ -106,7 +109,7 @@ def load(filename):
         v_list = []
         for j in range(vertex_retrieved):
             err(lib.SUVertexGetPosition(vertices[j], position_p))
-            v_list.append(Vector3(position_p.x, position_p.y, position_p.z))
+            v_list.append(Vector3(position_p.x, position_p.y, position_p.z) * SCALE)
 
         edges = [step.add_edge(v_list[j - 1], v_list[j])
                  for j in range(len(v_list))]
