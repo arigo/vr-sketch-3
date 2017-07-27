@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using UnityEngine;
 using BaroqueUI;
 
@@ -29,39 +28,15 @@ public class WorldScript : MonoBehaviour
         SelectedStem = 253,
     };
 
-    public delegate void SignalErrorDelegate([In, MarshalAs(UnmanagedType.LPWStr)] string error);
-    public delegate void UpdateDelegate(int index, int kind,
-        [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)] float[] data, int data_count);
-    public delegate void ApproxPlaneDelegate(
-        [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] float[] points, int coord_count,
-        [Out, MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] float[] plane);
-    public delegate void ShowMenuDelegate(int controller_num,
-        [In, MarshalAs(UnmanagedType.LPWStr)] string menu);
-
-    [DllImport("PyUnityVR_cffi", CharSet = CharSet.Unicode)]
-    public static extern int pyunityvr_init(SignalErrorDelegate error, UpdateDelegate update,
-                                            ApproxPlaneDelegate approx_plane, ShowMenuDelegate show_menu);
-    
-    [DllImport("PyUnityVR_cffi")]
-    public static extern int pyunityvr_frame(int num_ctrls, [In, MarshalAs(UnmanagedType.LPArray)] float[] controllers);
-
-    [DllImport("PyUnityVR_cffi")]
-    public static extern int pyunityvr_click([In, MarshalAs(UnmanagedType.LPWStr)] string id);
-
-    [DllImport("PyUnityVR_cffi")]
-    public static extern int pyunityvr_manual_enter(int token, float value);
-
 
     /***************************************************************************************************/
 
     public GameObject distanceKeypadPrefab, referential;
 
+    VRSketch3.PythonThread python_thread;
+
     List<WorldObject> world_objects;
     Dictionary<Kind, WorldObject> world_prefabs;
-    SignalErrorDelegate keepalive_error;
-    UpdateDelegate keepalive_update;
-    ApproxPlaneDelegate keepalive_approx_plane;
-    ShowMenuDelegate keepalive_show_menu;
     List<Controller> active_controllers;
     GameObject current_dialog;
 
@@ -97,28 +72,10 @@ public class WorldScript : MonoBehaviour
     public void ManualEnter(int token, float value)
     {
         if (token >= 0)
-        {
-            if (pyunityvr_manual_enter(token, value) != 42)
-                Debug.LogError("pyunityvr_manual_enter() failed!");
-        }
+            python_thread.RequestManualEnter(token, value);
     }
 
-    static void CB_SignalError(string error)
-    {
-        if (error.StartsWith("INFO:"))
-        {
-            Debug.Log(error.Substring(5));
-        }
-        else
-        {
-            Debug.LogError(error);
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.Beep();
-#endif
-        }
-    }
-
-    void CB_Update(int index, int kind1, float[] data, int data_count)
+    public void ApplyPendingUpdate(int index, int kind1, float[] data)
     {
         while (!(index < world_objects.Count))
             world_objects.Add(null);
@@ -149,29 +106,22 @@ public class WorldScript : MonoBehaviour
             wo.UpdateWorldObject(data);
     }
 
-    void CB_ApproxPlane(float[] points, int coord_count, float[] plane)
+    private void Update()
     {
-        Vector3[] pts = new Vector3[coord_count / 3];
-        for (int i = 0; i < pts.Length; i++)
-            pts[i] = new Vector3(points[3 * i],
-                                 points[3 * i + 1],
-                                 points[3 * i + 2]);
-        Plane result = VRSketch3.PlaneRecomputer.RecomputePlane(pts);
-        plane[0] = result.normal.x;
-        plane[1] = result.normal.y;
-        plane[2] = result.normal.z;
-        plane[3] = result.distance;
+        /* every graphical frame update, fetch the next batch of pending
+         * updates requested from Python and apply them to Unity */
+        foreach (var pu_delegate in python_thread.NextUpdatesBatch())
+            pu_delegate(this);
     }
 
-    void CB_ShowMenu(int controller_num, string menu_string)
+    public void ShowMenu(int controller_num, string menu_string)
     {
         var menu = new Menu();
         foreach (var line in menu_string.Split('\n'))
         {
             int colon = line.IndexOf('\t');
             menu.Add(line.Substring(colon + 1), () => {
-                if (pyunityvr_click(line.Substring(0, colon)) != 42)
-                    Debug.LogError("pyunityvr_click() failed!");
+                python_thread.RequestClick(line.Substring(0, colon));
             });
         }
         GameObject requester = gameObject;
@@ -180,6 +130,9 @@ public class WorldScript : MonoBehaviour
             requester = null;
             controller_num -= 1000;
         }
+        if (controller_num >= active_controllers.Count)
+            return;   /* out of sync rare case, ignore */
+
         var dialog = menu.MakePopup(active_controllers[controller_num], requester);
         if (dialog == null)
             current_dialog = null;
@@ -218,14 +171,7 @@ public class WorldScript : MonoBehaviour
 
         world_objects = new List<WorldObject>();
 
-        /* the delegate object themselves must remain alive for the duration of the whole run! */
-        keepalive_error = CB_SignalError;
-        keepalive_update = CB_Update;
-        keepalive_approx_plane = CB_ApproxPlane;
-        keepalive_show_menu = CB_ShowMenu;
-
-        if (pyunityvr_init(keepalive_error, keepalive_update, keepalive_approx_plane, keepalive_show_menu) != 42)
-            Debug.LogError("pyunityvr_init() failed!");
+        python_thread = new VRSketch3.PythonThread();
 
         var gt = Controller.GlobalTracker(this);
         gt.isConcurrent = true;
@@ -296,8 +242,7 @@ public class WorldScript : MonoBehaviour
             data[o + 2] = pos.y;
             data[o + 3] = pressed;
         }
-        if (pyunityvr_frame(j / 4, data) != 42)
-            Debug.LogError("pyunityvr_frame() failed!");
+        python_thread.RequestFrame(j / 4, data);
     }
 
 
