@@ -106,8 +106,9 @@ class Pushpull(BaseTool):
         controller_num = self._all_controllers.index(follow_ctrl)
         token = self.app.fetch_manual_token(self, "length")
         dist = Plane.from_point_and_normal(p1, self.source_face.plane.normal).signed_distance_to_point(p2)
-        p2o = p1 + self.source_face.plane.normal * dist
-        self.app.flash(TextHint(p1, p2o, distance2text(abs(p2o - p1)), controller_num, token))
+        p1o = self.closest_source_vertex
+        p2o = p1o + self.source_face.plane.normal * dist
+        self.app.flash(TextHint(p1o, p2o, distance2text(abs(dist)), controller_num, token))
 
     def manual_enter(self, key, new_value):
         assert key == "length"
@@ -132,5 +133,8 @@ class Pushpull(BaseTool):
             if not found_continuation_face:
                 self.remove_original_face = False
                 break
+
+        dist = [(abs(e.v1 - self.app.head), e.v1) for e in self.source_face.edges]
+        self.closest_source_vertex = min(dist)[1]
 
         return ctrl

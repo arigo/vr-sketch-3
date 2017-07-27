@@ -66,6 +66,9 @@ class ControllersMgr(object):
 
         self.app.model_scale = controllers[num_controllers * 4]
         self.app.current_time = controllers[num_controllers * 4 + 1]
+        self.app.head = Vector3(controllers[num_controllers * 4 + 2],
+                                controllers[num_controllers * 4 + 3],
+                                controllers[num_controllers * 4 + 4])
 
         # this shows the tool selection menu when we press the touchpad, for now.
         # Once a menu is active, C# will call this function with num_controllers == 0,

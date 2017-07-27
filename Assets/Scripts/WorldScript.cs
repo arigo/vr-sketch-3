@@ -224,9 +224,13 @@ public class WorldScript : MonoBehaviour
         if (current_dialog)
             j = 0;
 
-        var data = new float[j + 2];
+        var data = new float[j + 5];
         data[j] = transform.localScale.y;
         data[j + 1] = Time.time;
+        Vector3 head = transform.InverseTransformPoint(Baroque.GetHeadTransform().position);
+        data[j + 2] = head.x;
+        data[j + 3] = head.z;
+        data[j + 4] = head.y;
 
         for (int o = 0; o < j; o += 4)
         {
