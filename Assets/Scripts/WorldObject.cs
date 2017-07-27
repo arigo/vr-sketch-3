@@ -31,4 +31,45 @@ public abstract class WorldObject : MonoBehaviour
             sb.Append((char)data[index++]);
         return sb.ToString();
     }
+
+
+    public class MaterialCache
+    {
+        public delegate void BuildDelegate(Material mat, Color col);
+
+        Material base_material;
+        Dictionary<Color, Material> cache;
+        BuildDelegate build_delegate;
+
+        public MaterialCache(Material base_material, BuildDelegate build = null)
+        {
+            this.base_material = base_material;
+            cache = new Dictionary<Color, Material>();
+            if (build == null)
+                cache[base_material.color] = base_material;
+            build_delegate = build != null ? build : BuildDefaultMaterial;
+        }
+
+        static void BuildDefaultMaterial(Material mat, Color col)
+        {
+            mat.color = col;
+        }
+
+        public Material Get(Color col)
+        {
+            Material mat;
+            if (!cache.TryGetValue(col, out mat))
+            {
+                mat = new Material(base_material);
+                build_delegate(mat, col);
+                cache[col] = mat;
+            }
+            return mat;
+        }
+
+        public Material Get()
+        {
+            return base_material;
+        }
+    }
 }

@@ -7,6 +7,9 @@ using VRSketch3;
 
 public class PolygonObject : WorldObject
 {
+    static MaterialCache mcache;
+    static MaterialCache mcache_highlight;
+
     public override void UpdateWorldObject(float[] data)
     {
         var vertices = new Vector3[data.Length / 3];
@@ -15,18 +18,29 @@ public class PolygonObject : WorldObject
 
         ComputeMesh(vertices);
 
-        if (kind == WorldScript.Kind.ColoredPolygon)
+        Material mat;
+        if (kind == WorldScript.Kind.PolygonHighlight)
         {
-            Color col = GetColor24(data, vertices.Length * 3);
-            GetComponent<MeshRenderer>().material.color = col;
+            if (mcache_highlight == null)
+                mcache_highlight = new MaterialCache(GetComponent<MeshRenderer>().sharedMaterial, BuildHighlightMaterial);
+            mat = mcache_highlight.Get(GetColor24(data, vertices.Length * 3));
         }
-        else if (kind == WorldScript.Kind.PolygonHighlight)
+        else
         {
-            Color col = GetColor24(data, vertices.Length * 3);
-            Material mat = GetComponent<MeshRenderer>().material;
-            mat.SetColor("g_vOutlineColor", col);
-            mat.SetColor("g_vMaskedOutlineColor", Color.Lerp(Color.black, col, 0.7f));
+            if (mcache == null)
+                mcache = new MaterialCache(GetComponent<MeshRenderer>().sharedMaterial);
+            if (kind == WorldScript.Kind.ColoredPolygon)
+                mat = mcache.Get(GetColor24(data, vertices.Length * 3));
+            else
+                mat = mcache.Get();
         }
+        GetComponent<MeshRenderer>().sharedMaterial = mat;
+    }
+
+    static void BuildHighlightMaterial(Material mat, Color col)
+    {
+        mat.SetColor("g_vOutlineColor", col);
+        mat.SetColor("g_vMaskedOutlineColor", Color.Lerp(Color.black, col, 0.7f));
     }
 
     void ComputeMesh(Vector3[] vertices)

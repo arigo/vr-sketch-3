@@ -6,9 +6,13 @@ using UnityEngine;
 public class CylinderObject : WorldObject
 {
     public float y_scale;
+    static MaterialCache mcache;
 
     public override void UpdateWorldObject(float[] data)
     {
+        if (mcache == null)
+            mcache = new MaterialCache(GetComponentInChildren<MeshRenderer>().sharedMaterial);
+
         Vector3 p1 = GetVec3(data, 0);
         Vector3 p2 = GetVec3(data, 3);
 
@@ -25,9 +29,14 @@ public class CylinderObject : WorldObject
             Color col2 = data.Length > 7 ? GetColor24(data, 7) : col;
             foreach (var rend in GetComponentsInChildren<MeshRenderer>())
             {
-                rend.material.color = col;
+                rend.sharedMaterial = mcache.Get(col);
                 Color swap = col; col = col2; col2 = swap;
             }
+        }
+        else
+        {
+            foreach (var rend in GetComponentsInChildren<MeshRenderer>())
+                rend.sharedMaterial = mcache.Get();
         }
     }
 }
