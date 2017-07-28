@@ -1,4 +1,4 @@
-from worldobj import SelectPointer, Stem
+from worldobj import SelectPointer, SelectPointerPlus, SelectPointerMinus, Stem
 from util import Vector3
 from model import ModelStep
 import selection
@@ -16,14 +16,23 @@ class Select(BaseTool):
             closest = selection.find_closest(self.app, ctrl.position,
                         ignore=set([selection.find_closest_vertex]))
             edges = closest.individual_edges()
-            edges_add = any(set(edges) - self.app.selected_edges)
+            edges = set(edges)
+            for e in list(edges):
+                for e1 in self.app.model.edges:
+                    if e1.v1 == e.v2 and e1.v2 == e.v1:
+                        edges.add(e1)
+
+            edges_add = any(edges - self.app.selected_edges)
+            cls = SelectPointer
             if edges:
                 if edges_add:
+                    cls = SelectPointerPlus
                     color = selection.ADD_COLOR
                 else:
+                    cls = SelectPointerMinus
                     color = selection.SELECTED_COLOR
                 closest.flash_flat(color)
-            self.app.flash(SelectPointer(closest.get_point()))
+            self.app.flash(cls(closest.get_point()))
 
             if ctrl.trigger_pressed():
                 if edges:
