@@ -111,7 +111,7 @@ def load(filename):
             err(lib.SUVertexGetPosition(vertices[j], position_p))
             v_list.append(Vector3(position_p.x, position_p.y, position_p.z) * SCALE)
 
-        edges = [step.add_edge(v_list[j - 1], v_list[j])
+        edges = [step.add_edge(step.model.root_group, v_list[j - 1], v_list[j])
                  for j in range(len(v_list))]
         step.add_face(edges)
         # XXX this misses the edges that are not attached to faces

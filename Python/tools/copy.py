@@ -40,7 +40,7 @@ class Copy(BaseTemporaryTool):
             step = ModelStep(self.app.model, "Copy selection")
             e_dict = {}
             for edge in self.move_edges:
-                e_dict[edge] = step.add_edge(edge.v1 + delta, edge.v2 + delta)
+                e_dict[edge] = step.add_edge(self.app.curgroup, edge.v1 + delta, edge.v2 + delta)
             for face in self.move_faces:
                 step.add_face([e_dict[e] for e in face.edges])
             self.app.execute_step(step)

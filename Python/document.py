@@ -145,10 +145,11 @@ class VRSketchFile(object):
         v3 = Vector3(1, 1, 1)
         v4 = Vector3(0, 1, 1)
         step = ModelStep(self.model, "Initial rectangle")
-        e1 = step.add_edge(v1, v2)
-        e2 = step.add_edge(v2, v3)
-        e3 = step.add_edge(v3, v4)
-        e4 = step.add_edge(v4, v1)
+        gr = self.model.root_group
+        e1 = step.add_edge(gr, v1, v2)
+        e2 = step.add_edge(gr, v2, v3)
+        e3 = step.add_edge(gr, v3, v4)
+        e4 = step.add_edge(gr, v4, v1)
         step.add_face([e1, e2, e3, e4])
         step._apply_to_model()
         self.record_undoable_action(step)
@@ -197,7 +198,7 @@ def write_model_step(f, model_step):
                             gr = gr.parent
                         repr_group[fe.group] = '/'.join(reversed(items))
                     d["group"] = repr_group[fe.group]
-                add1.append(d)
+                adds1.append(d)
             elif isinstance(fe, Face):
                 edges = ["e%d" % e.eid for e in fe.edges]
                 adds2.append({"id": "f%d" % fe.fid,

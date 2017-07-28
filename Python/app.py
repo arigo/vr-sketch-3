@@ -26,7 +26,7 @@ class App(object):
     def open(self, filename):
         self.file = document.VRSketchFile(filename)
         self.model = self.file.model
-        self.curgroup = self.file.root_group
+        self.curgroup = self.model.root_group
         self.model_updated()
 
     def display(self, worldobj):
@@ -49,12 +49,14 @@ class App(object):
 
     def _add_edge_or_face(self, edge_or_face):
         if isinstance(edge_or_face, model.Edge):
-            for e1 in self.selected_edges:
-                if ((e1.v1 == edge_or_face.v1 and e1.v2 == edge_or_face.v2) or
-                    (e1.v1 == edge_or_face.v2 and e1.v2 == edge_or_face.v1)):
-                    wo = worldobj.SelectedStem(edge_or_face.v1, edge_or_face.v2)
-                    break
-            else:
+            wo = None
+            if edge_or_face.group is self.curgroup:
+                for e1 in self.selected_edges:
+                    if ((e1.v1 == edge_or_face.v1 and e1.v2 == edge_or_face.v2) or
+                        (e1.v1 == edge_or_face.v2 and e1.v2 == edge_or_face.v1)):
+                        wo = worldobj.SelectedStem(edge_or_face.v1, edge_or_face.v2)
+                        break
+            if wo is None:
                 wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2)
         elif isinstance(edge_or_face, model.Face):
             wo = worldobj.Polygon([edge.v1 for edge in edge_or_face.edges])

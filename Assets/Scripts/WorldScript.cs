@@ -71,7 +71,7 @@ public class WorldScript : MonoBehaviour
 
     public Controller ControllerByIndex(int index)
     {
-        if (index < 0 || index >= active_controllers.Length)
+        if (index < 0 || index >= active_controllers.Count)
             return null;
         return active_controllers[index];
     }

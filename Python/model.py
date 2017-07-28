@@ -144,31 +144,31 @@ class Model(object):
 
     def get_groups(self):
         result = set(self.group_edges)
-        result |= self.group_faces
+        result.update(self.group_faces)
         return result
 
     def all_vertices(self, only_group=None):
+        result = []
         for edge in self.all_edges(only_group):
-            yield edge.v1
-            yield edge.v2
+            result.append(edge.v1)
+            result.append(edge.v2)
+        return result
 
     def all_edges(self, only_group=None):
-        if only_group is None:
-            groups = self.group_edges.keys()
-        else:
-            groups = [only_group]
-        for group in groups:
-            for edge in self.get_edges(group):
-                yield edge
+        if only_group is not None:
+            return list(self.get_edges(only_group))
+        result = []
+        for key, value in self.group_edges.items():
+            result += value
+        return result
 
     def all_faces(self, only_group=None):
-        if only_group is None:
-            groups = self.group_faces.keys()
-        else:
-            groups = [only_group]
-        for group in groups:
-            for face in self.get_faces(group):
-                yield face
+        if only_group is not None:
+            return list(self.get_faces(only_group))
+        result = []
+        for key, value in self.group_faces.items():
+            result += value
+        return result
 
 
 class Group(object):

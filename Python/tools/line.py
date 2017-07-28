@@ -36,7 +36,7 @@ class Line(BaseTool):
     def handle_accept(self):
         if self.source_position != self.target_position:
             step = ModelStep(self.app.model, "Draw line")
-            step.add_edge(self.source_position, self.target_position)
+            step.add_edge(self.app.curgroup, self.source_position, self.target_position)
             self.app.execute_step(step)
 
     def handle_drag(self, follow_ctrl, other_ctrl=None):
@@ -133,5 +133,5 @@ class Line(BaseTool):
 
     def action_new_face(self, new_vertices):
         step = ModelStep(self.app.model, "Draw face")
-        step.add_face([step.add_edge(new_vertices[i - 1], new_vertices[i]) for i in range(len(new_vertices))])
+        step.add_face([step.add_edge(self.app.curgroup, new_vertices[i - 1], new_vertices[i]) for i in range(len(new_vertices))])
         self.app.execute_step(step)

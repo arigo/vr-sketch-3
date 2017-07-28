@@ -38,7 +38,7 @@ class Rectangle(BaseTool):
             step = ModelStep(self.app.model, "Rectangle")
             e_list = []
             for i in range(len(self.rectangle)):
-                e_list.append(step.add_edge(self.rectangle[i - 1], self.rectangle[i]))
+                e_list.append(step.add_edge(self.app.curgroup, self.rectangle[i - 1], self.rectangle[i]))
             step.add_face(e_list)
             self.app.execute_step(step)
 
