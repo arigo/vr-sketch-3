@@ -144,6 +144,15 @@ public class WorldScript : MonoBehaviour
         }
     }
 
+    private void Gt_onTouchPressDown(Controller controller)
+    {
+        if (current_dialog)
+        {
+            Destroy(current_dialog);
+            current_dialog = null;
+        }
+    }
+
     private void Start()
     {
         world_prefabs = new Dictionary<Kind, WorldObject>();
@@ -179,6 +188,7 @@ public class WorldScript : MonoBehaviour
         gt.onGripDown += Gt_onGripDown;
         gt.onGripDrag += Gt_onGripDrag;
         gt.onGripUp += Gt_onGripUp;
+        gt.onTouchPressDown += Gt_onTouchPressDown;
 
         Gt_onControllersUpdate(new Controller[0]);
     }
