@@ -1,7 +1,9 @@
-from worldobj import ColoredPolygon, Stem
+from worldobj import ColoredPolygon, Stem, DashedStem, CrossPointer
+from worldobj import TextHint, distance2text
 from util import Vector3, WholeSpace, EmptyIntersection, Plane, SinglePoint, GeometryDict
-from .base import BaseTemporaryTool
+from model import EPSILON, ModelStep
 import selection
+from .base import BaseTemporaryTool
 
 
 class Copy(BaseTemporaryTool):
@@ -14,16 +16,20 @@ class Copy(BaseTemporaryTool):
         if not move_vertices:
             return False
 
+        move_edges = set([edge for edge in self.app.model.edges
+                               if edge.v1 in move_vertices and edge.v2 in move_vertices])
+        move_faces = [face for face in self.app.model.faces
+                           if all(e in move_edges for e in face.edges)]
+
         self.move_vertices = move_vertices
-        self.move_edges = set([edge for edge in self.app.model.edges
-                                    if edge.v1 in move_vertices and edge.v2 in move_vertices])
-        self.move_faces = [face for face in self.app.model.faces
-                                if all(e in move_edges for e in face.edges)]
+        self.move_edges = move_edges
+        self.move_faces = move_faces
 
         dist = [(abs(v - self.app.head), v) for v in move_vertices]
         self.source_position = min(dist)[1]
         self.initial_selection_guides = list(selection.all_45degree_guides(self.source_position))
         self.delta = None
+        self.fixed_distance = None
 
         return BaseTemporaryTool.enable_temporary_tool(self, ctrl)
 
@@ -41,8 +47,6 @@ class Copy(BaseTemporaryTool):
 
 
     def handle_drag(self, follow_ctrl, other_ctrl=None):
-        self.delta = follow_ctrl.position - self.source_position
-
         # XXXXXXXX Huge Amount of Copy-Paste-Edit From move.py is Bad XXXXXXXX
 
         # Compute the target "selection" object from what we hover over
@@ -97,17 +101,40 @@ class Copy(BaseTemporaryTool):
         # Shift the target position to the alignment subspace
         p3 = subspace.project_point_inside(closest.get_point())
 
+        # Apply the fixed distance, if any
+        if self.fixed_distance is not None:
+            length1 = abs(self.source_position - p3)
+            if length1 > EPSILON:
+                p3 = self.source_position + (p3 - self.source_position) * (self.fixed_distance / length1)
+
         closest.adjust(p3)
+
+        # Draw a dashed line from the initial to the final point
+        p1 = self.source_position
+        p2 = closest.get_point()
+        self.app.flash(DashedStem(p1, p2, *original_stem_color))
 
         for make_dashed_stem in selection_guides:
             # Flash a dashed line to show that we have used the guide
             self.app.flash(make_dashed_stem())
 
+        # Add the distance hint
+        if p1 != p2:
+            controller_num = self._all_controllers.index(follow_ctrl)
+            token = self.app.fetch_manual_token(self, "length")
+            self.app.flash(TextHint(p1, p2, distance2text(abs(p2 - p1)), controller_num, token))
+
         # ----------
 
+        delta = self.delta = p3 - self.source_position
         for edge in self.move_edges:
             self.app.flash(Stem(edge.v1 + delta, edge.v2 + delta,
                                 selection.SelectedColorScheme.EDGE))
         for face in self.move_faces:
             self.app.flash(ColoredPolygon([e.v1 + delta for e in face.edges],
                                           selection.TargetColorScheme.FACE))
+
+
+    def manual_enter(self, key, new_value):
+        assert key == "length"
+        self.fixed_distance = new_value

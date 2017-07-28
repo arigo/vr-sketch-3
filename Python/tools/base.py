@@ -4,6 +4,7 @@ DISTANCE_MOVEMENT_TIME = 0.4
 
 class BaseTool(object):
     KEEP_SELECTION = False
+    CANCEL_WHEN_NO_CONTROLLER = True
 
     def __init__(self, app):
         self.app = app
@@ -55,7 +56,8 @@ class BaseTool(object):
                 self._clicking_gen = self._clicking(ctrl)
 
         elif self._follow_ctrl not in controllers:
-            self.cancel()
+            if controllers or self.CANCEL_WHEN_NO_CONTROLLER:
+                self.cancel()
 
         else:
             try:
@@ -99,10 +101,22 @@ class BaseTool(object):
 
 
 class BaseTemporaryTool(BaseTool):
+    CANCEL_WHEN_NO_CONTROLLER = False
+
+    def _wait_for_next_click(self, follow_ctrl):
+        while follow_ctrl.is_trigger_down():
+            yield
+        while True:
+            if follow_ctrl not in self._all_controllers:
+                return
+            for ctrl in self._all_controllers:
+                if ctrl.is_trigger_down():
+                    return
+            yield
 
     def enable_temporary_tool(self, ctrl):
         self._follow_ctrl = ctrl
-        self._clicking_gen = self._clicking(ctrl)
+        self._clicking_gen = self._wait_for_next_click(ctrl)
         return True
 
     def handle_hover(self, controllers):

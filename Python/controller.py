@@ -11,6 +11,10 @@ class Controller(object):
     def __init__(self, index):
         self._index = index
 
+    def recreate(self):
+        if hasattr(self, 'pressed'):
+            del self.pressed
+
     def update(self, pos, pressed):
         self.position = pos
         self.prev_pressed = getattr(self, 'pressed', pressed)
@@ -27,7 +31,7 @@ class Controller(object):
 
     def show_menu(self, items, force):
         # _show_menu() is injected into the globals by app.initialize_functions()
-        s = '\n'.join(['%s\t%s' % (id, text) for (id, text) in items])
+        s = u'\n'.join(['%s\t%s' % (id, text) for (id, text) in items])
         _show_menu(self._index + (1000 if force else 0), s)
 
 
@@ -39,6 +43,7 @@ class ControllersMgr(object):
     def __init__(self, app):
         self.app = app
         self.controllers = []
+        self.controllers_cache = {}
         self.tool = None
         self.load_tool("rectangle")
 
@@ -64,7 +69,11 @@ class ControllersMgr(object):
             while len(self.controllers) > num_controllers:
                 self.controllers.pop()
             while len(self.controllers) < num_controllers:
-                self.controllers.append(Controller(len(self.controllers)))
+                _index = len(self.controllers)
+                if _index not in self.controllers_cache:
+                    self.controllers_cache[_index] = Controller(_index)
+                self.controllers_cache[_index].recreate()
+                self.controllers.append(self.controllers_cache[_index])
 
         for i in range(num_controllers):
             cpos = Vector3(controllers[i * 4],
