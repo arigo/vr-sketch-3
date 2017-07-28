@@ -93,12 +93,21 @@ class Rectangle(BaseTool):
                                       selection_guide_colors[0], selection_guide_colors[1]))
 
         # Apply the fixed distances, if any
-        for fixed_key, fixed_dist in self.fixed_distance.items():
-            c1 = getattr(self.initial_selection.get_point(), fixed_key)
-            c2 = getattr(p3, fixed_key)
+        if self.fixed_direction in self.fixed_distance:
+            fixed_dist = self.fixed_distance[self.fixed_direction]
+            c1 = getattr(self.initial_selection.get_point(), self.fixed_direction)
+            c2 = getattr(p3, self.fixed_direction)
             if abs(c1 - c2) > EPSILON:
                 c2 = (c1 + fixed_dist) if c2 > c1 else (c1 - fixed_dist)
-                p3 = p3.withcoord(fixed_key, c2)
+                p3 = p3.withcoord(self.fixed_direction, c2)
+        if (self.fixed_direction + '^')  in self.fixed_distance:
+            fixed_dist = self.fixed_distance[self.fixed_direction + '^']
+            c1 = p3 - self.initial_selection.get_point()
+            c1 = c1.withcoord(self.fixed_direction, 0.0)
+            if abs(c1) > EPSILON:
+                c1 = c1.normalized() * fixed_dist
+                c1 = self.initial_selection.get_point() + c1
+                p3 = c1.withcoord(self.fixed_direction, getattr(p3, self.fixed_direction))
 
         closest.adjust(p3)
 
@@ -110,19 +119,16 @@ class Rectangle(BaseTool):
         p1 = self.initial_selection.get_point()
         p3 = closest.get_point()
 
-        dx = abs(p1.x - p3.x)
-        dy = abs(p1.y - p3.y)
-        dz = abs(p1.z - p3.z)
-        if dx < EPSILON:
-            self.fixed_direction = "y" if dy > dz else "z"
-        elif dy < EPSILON:
-            self.fixed_direction = "x" if dx > dz else "z"
-        elif dz < EPSILON:
-            self.fixed_direction = "x" if dx > dy else "y"
-
-        if self.fixed_distance and self.fixed_direction not in self.fixed_distance:
-            choices = [(abs(getattr(p1, dir) - getattr(p3, dir)), dir) for dir in self.fixed_distance]
-            self.fixed_direction = max(choices)[1]
+        if not self.fixed_distance:
+            dx = abs(p1.x - p3.x)
+            dy = abs(p1.y - p3.y)
+            dz = abs(p1.z - p3.z)
+            if dx < EPSILON:
+                self.fixed_direction = "y" if dy > dz else "z"
+            elif dy < EPSILON:
+                self.fixed_direction = "x" if dx > dz else "z"
+            elif dz < EPSILON:
+                self.fixed_direction = "x" if dx > dy else "y"
 
         p2 = p1.withcoord(self.fixed_direction, getattr(p3, self.fixed_direction))
         p4 = p3.withcoord(self.fixed_direction, getattr(p1, self.fixed_direction))
@@ -134,21 +140,12 @@ class Rectangle(BaseTool):
 
         # Add the two distance hints, with the right key
         controller_num = self._all_controllers.index(follow_ctrl)
-        for pn in [p2, p4]:
-            cx = abs(p1.x - pn.x)
-            cy = abs(p1.y - pn.y)
-            cz = abs(p1.z - pn.z)
-            key = "x" * (cx > EPSILON) + "y" * (cy > EPSILON) + "z" * (cz > EPSILON)
-            if len(key) == 0:
-                continue
-            if len(key) == 2:
-                c_max, key1 = max([(cx, "x"), (cy, "y"), (cz, "z")])
-                if ((key1 == "x" or c_max > cx * 2) and
-                    (key1 == "y" or c_max > cy * 2) and
-                    (key1 == "z" or c_max > cz * 2)):
-                    key = key1
-            token = self.app.fetch_manual_token(self, key) if len(key) == 1 else -1
-            self.app.flash(TextHint(p1, pn, distance2text(abs(pn - p1)), controller_num, token))
+        token = self.app.fetch_manual_token(self, self.fixed_direction)
+        self.app.flash(TextHint(p1, p2, distance2text(abs(p2 - p1)), controller_num, token))
+        token = self.app.fetch_manual_token(self, self.fixed_direction + '^')
+        self.app.flash(TextHint(p2, p3, distance2text(abs(p3 - p2)), controller_num, token))
 
     def manual_enter(self, key, new_value):
         self.fixed_distance[key] = new_value
+        assert key[0] in "xyz"
+        self.fixed_direction = key[0]

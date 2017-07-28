@@ -120,10 +120,14 @@ def _text2raw(text):
     return [len(text)] + [ord(ch) for ch in text]
 
 def distance2text(distance):
+    cm = distance * 100.0
     if distance > 1.0 - EPSILON:
-        return '%.2f m' % (distance,)
+        text = '%.2f m' % (distance,)
     else:
-        return '%.0f cm' % (distance * 100.0,)
+        text = '%.0f cm' % (cm,)
+    if abs(cm - round(cm)) > EPSILON:
+        text = '~ ' + text
+    return text
 
 class TextHint(WorldObject):
     _kind = 150
