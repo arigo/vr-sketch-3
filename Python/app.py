@@ -146,6 +146,9 @@ class App(object):
     def _handle_click_redo(self):
         self.file.redo_once(self)
 
+    def new_submenu(self, lst):
+        self.current_menu_ctrl.show_menu(lst, force=True)
+
     def _handle_click_open(self):
         lst = []
         DIR = os.path.dirname(self.file.filename)
@@ -158,7 +161,22 @@ class App(object):
                 if same:
                     text = u"\u2714 " + text
                 lst.append((u'open_%s' % fullfn, text))
-        self.current_menu_ctrl.show_menu(lst, force=True)
+        self.new_submenu(lst)
+
+    def _handle_click_edit(self):
+        s = bool(self.selected_edges)
+        g = False   # xxx
+        self.new_submenu([
+            ("copy",         "Copy" if s else "(Copy)"),
+            ("newgroup",     "Make new group" if s else "(Make a new group)"),
+            ("mirrorgroup",  "Mirror group" if g else "(Mirror group)"),
+            ("explodegroup", "Explode group" if g else "(Explode group)"),
+        ])
+
+    def _handle_click_copy(self):
+        from tools.copy import Copy
+        tool = Copy(self)
+        self.ctrlmgr.set_temporary_tool(tool, self.current_menu_ctrl)
 
 
     def fetch_manual_token(self, owner, key):

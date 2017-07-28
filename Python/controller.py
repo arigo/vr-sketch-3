@@ -50,6 +50,15 @@ class ControllersMgr(object):
         self.tool = ToolCls(self.app)
         self.selected_tool = name
 
+    def set_temporary_tool(self, tool, ctrl):
+        self.tool.cancel()
+        if tool.enable_temporary_tool(ctrl):
+            self.tool = tool
+
+    def unset_temporary_tool(self):
+        self.load_tool(self.selected_tool)
+        return self.tool
+
     def handle_controllers(self, num_controllers, controllers):
         if len(self.controllers) != num_controllers:
             while len(self.controllers) > num_controllers:
@@ -97,12 +106,16 @@ class ControllersMgr(object):
 
     def get_tools_menu(self):
         for tool_name in self.TOOLS:
+            key = 'tool_' + tool_name
             text = unicode(self.TOOL_NAMES.get(tool_name, tool_name.capitalize()))
             if tool_name == self.selected_tool:
+                if tool_name == 'select':
+                    text = 'Select/Edit...'
+                    key = 'edit'
                 text = u"\u2714 " + text
-            yield ('tool_' + tool_name, text)
+            yield (key, text)
         uactions = self.app.file.undoable_actions
         ractions = self.app.file.redoable_actions
-        yield ('undo', 'Undo %s' % (uactions[-1].name if uactions else '(nothing)'))
-        yield ('redo', 'Redo %s' % (ractions[-1].name if ractions else '(nothing)'))
+        yield ('undo', ('Undo %s' % uactions[-1].name) if uactions else '(Undo)')
+        yield ('redo', ('Redo %s' % ractions[-1].name) if ractions else '(Redo)')
         yield ('open', 'Open document...')

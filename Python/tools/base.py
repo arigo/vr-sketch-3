@@ -96,3 +96,15 @@ class BaseTool(object):
                 for ctrl in self._all_controllers:
                     if ctrl.is_trigger_down():
                         return
+
+
+class BaseTemporaryTool(BaseTool):
+
+    def enable_temporary_tool(self, ctrl):
+        self._follow_ctrl = ctrl
+        self._clicking_gen = self._clicking(ctrl)
+        return True
+
+    def handle_hover(self, controllers):
+        tool = self.app.ctrlmgr.unset_temporary_tool()
+        tool.handle_controllers(controllers)
