@@ -26,6 +26,7 @@ class App(object):
     def open(self, filename):
         self.file = document.VRSketchFile(filename)
         self.model = self.file.model
+        self.curgroup = self.file.root_group
         self.model_updated()
 
     def display(self, worldobj):
@@ -71,16 +72,23 @@ class App(object):
         self.model2worldobj.clear()
         for wo in lst:
             self.destroy(wo)
-        for fe in self.model.edges:
+        for fe in self.model.all_edges():
             self._add_edge_or_face(fe)
-        for fe in self.model.faces:
+        for fe in self.model.all_faces():
             self._add_edge_or_face(fe)
 
     def selection_updated(self):
-        for edge in self.model.edges:
+        edges = self.model.all_edges()
+        for edge in edges:
             self._remove_edge_or_face(edge)
-        for edge in self.model.edges:
+        for edge in edges:
             self._add_edge_or_face(edge)
+
+    def getcuredges(self):
+        return self.model.get_edges(self.curgroup)
+
+    def getcurfaces(self):
+        return self.model.get_faces(self.curgroup)
 
     def execute_step(self, model_step):
         model_step.consolidate(self)

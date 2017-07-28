@@ -8,8 +8,8 @@ def load(filename):
 
 def save(model, filename):
     step = ModelStep(model, "Conversion")
-    step.fe_add += model.edges
-    step.fe_add += model.faces
+    step.fe_add += model.all_edges()
+    step.fe_add += model.all_faces()
 
     with open(filename, 'wb') as f:
         document.write_header(f)

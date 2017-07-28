@@ -2,43 +2,44 @@ from util import EPSILON, Plane, GeometryDict
 import model
 
 
-def all_potential_planes(model):
-    if "potential_planes" not in model.caches:
+def all_potential_planes(model, group):
+    if "potential_planes" not in group.caches:
         result = GeometryDict()
-        for edge1 in model.edges:
-            for edge2 in model.edges:
+        medges = model.get_edges(group)
+        for edge1 in medges:
+            for edge2 in medges:
                 if edge1.v2 == edge2.v1 or edge1.v2 == edge2.v2:
                     normal = (edge1.v2 - edge1.v1).cross(edge2.v2 - edge2.v1)
                     normal_length = abs(normal)
                     if normal_length > EPSILON:
                         normal /= normal_length
                         result[Plane.from_point_and_normal(edge1.v2, normal)] = True
-        model.caches["potential_planes"] = result.keys()
-    return model.caches["potential_planes"]
+        group.caches["potential_planes"] = result.keys()
+    return group.caches["potential_planes"]
 
-def potential_new_face(model, point, max_distance=EPSILON):
+def potential_new_face(model, group, point, max_distance=EPSILON):
     best_vertices = None
     best_distance = max_distance
-    for plane in all_potential_planes(model):
+    for plane in all_potential_planes(model, group):
         # if the plane is farther than the previous best, ignore
         distance = plane.distance_to_point(point)
         if distance > best_distance:
             continue
         # if the point is already inside a face, reject that plane
-        #for face in model.faces:
+        #for face in model.get_faces(group):
         #    if face.plane.distance_to_point(point) <= max_distance and face.point_is_inside(point):
         #        break
         #else:
-        new_vertices = can_add_new_face_in_plane(model, point, plane)
+        new_vertices = can_add_new_face_in_plane(model, group, point, plane)
         if new_vertices is not None:
             best_distance = distance * 1.01
             best_vertices = new_vertices
     return best_vertices
 
-def can_add_new_face_in_plane(model, point, plane):
+def can_add_new_face_in_plane(model, group, point, plane):
     # build a list of edges in that plane, and sort it by distance to the point
     planar_edges = []
-    for edge in model.edges:
+    for edge in model.get_edges(group):
         if (plane.distance_to_point(edge.v1) < EPSILON and
             plane.distance_to_point(edge.v2) < EPSILON):
             planar_edges.append(edge)

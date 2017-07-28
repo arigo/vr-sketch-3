@@ -5,7 +5,9 @@ from util import Vector3, Plane, Line, SinglePoint, EPSILON, EmptyIntersection, 
 class Edge(object):
     _NUMBER = 1
 
-    def __init__(self, v1, v2, eid=None):
+    def __init__(self, group, v1, v2, eid=None):
+        assert isinstance(group, Group)
+        self.group = group
         self.v1 = v1
         self.v2 = v2
         if eid is None:
@@ -73,8 +75,12 @@ class Edge(object):
 class Face(object):
     _NUMBER = 1
     _UPDATE_PLANE = True
+    group = None
 
     def __init__(self, edges, fid=None):
+        self.group = edges[0].group
+        for edge in edges:
+            assert edge.group is self.group
         self.edges = edges
         if fid is None:
             fid = Face._NUMBER
@@ -126,14 +132,59 @@ class Face(object):
 class Model(object):
 
     def __init__(self):
-        self.edges = []
-        self.faces = []
-        self.caches = {}
+        self.root_group = Group(parent=None)
+        self.group_edges = {}     # {Group: list-of-Edges}
+        self.group_faces = {}     # {Group: list-of-Faces}
 
-    def all_vertices(self):
-        for edge in self.edges:
+    def get_edges(self, group):
+        return self.group_edges.setdefault(group, [])
+
+    def get_faces(self, group):
+        return self.group_faces.setdefault(group, [])
+
+    def get_groups(self):
+        result = set(self.group_edges)
+        result |= self.group_faces
+        return result
+
+    def all_vertices(self, only_group=None):
+        for edge in self.all_edges(only_group):
             yield edge.v1
             yield edge.v2
+
+    def all_edges(self, only_group=None):
+        if only_group is None:
+            groups = self.group_edges.keys()
+        else:
+            groups = [only_group]
+        for group in groups:
+            for edge in self.get_edges(group):
+                yield edge
+
+    def all_faces(self, only_group=None):
+        if only_group is None:
+            groups = self.group_faces.keys()
+        else:
+            groups = [only_group]
+        for group in groups:
+            for face in self.get_faces(group):
+                yield face
+
+
+class Group(object):
+    _NUMBER = 1
+
+    def __init__(self, parent, gid=None):
+        self.parent = parent
+        self.caches = {}
+        if gid is None:
+            gid = Group._NUMBER
+        if Group._NUMBER <= gid:
+            Group._NUMBER = gid + 1
+        self.gid = gid
+
+    def __repr__(self):
+        return '<Group %d>' % (self.gid,)
 
 
 class ModelStep(object):
@@ -156,20 +207,24 @@ class ModelStep(object):
             for edge in app.selected_edges:
                 old_sel.add(edge.eid)
             app.selected_edges.clear()
-            for edge in app.model.edges:
+            for edge in app.model.get_edges(app.curgroup):
                 if edge.eid in old_sel:
                     app.selected_edges.add(edge)
             app.selection_updated()
 
     def _apply_to_model(self):
         fe_remove = self.fe_remove
-        self.model.edges = [edge for edge in self.model.edges if edge not in fe_remove]
-        self.model.faces = [face for face in self.model.faces if face not in fe_remove]
+        for group in self._all_removed_groups():
+            edges = self.model.get_edges(group)
+            edges[:] = [edge for edge in edges if edge not in fe_remove]
+            faces = self.model.get_faces(group)
+            faces[:] = [face for face in faces if face not in fe_remove]
+        #
         for edge_or_face in self.fe_add:
             if isinstance(edge_or_face, Edge):
-                self.model.edges.append(edge_or_face)
+                self.model.get_edges(edge_or_face.group).append(edge_or_face)
             elif isinstance(edge_or_face, Face):
-                self.model.faces.append(edge_or_face)
+                self.model.get_faces(edge_or_face.group).append(edge_or_face)
             else:
                 raise AssertionError
 
@@ -179,14 +234,14 @@ class ModelStep(object):
         ms.fe_add.extend(self.fe_remove)
         return ms
 
-    def add_edge(self, v1, v2, paired_with=None):
-        for edge in self.model.edges:
+    def add_edge(self, group, v1, v2, paired_with=None):
+        for edge in self.model.get_edges(group):
             if edge.v1 == v1 and edge.v2 == v2 and edge not in self.fe_remove:
                 return edge
         for edge in self.fe_add:
-            if isinstance(edge, Edge) and edge.v1 == v1 and edge.v2 == v2:
+            if isinstance(edge, Edge) and edge.v1 == v1 and edge.v2 == v2 and edge.group is group:
                 return edge
-        edge = Edge(v1, v2, None if paired_with is None else paired_with.eid)
+        edge = Edge(group, v1, v2, None if paired_with is None else paired_with.eid)
         self.fe_add.append(edge)
         return edge
 
@@ -210,7 +265,8 @@ class ModelStep(object):
             return v
         # xxx bad complexity here
         for edge in move_edges:
-            edges_old2new[edge] = self.add_edge(map_v(edge.v1), map_v(edge.v2), paired_with=edge)
+            edges_old2new[edge] = self.add_edge(edge.group, map_v(edge.v1), map_v(edge.v2),
+                                                paired_with=edge)
         for face in move_faces:
             edges = [edges_old2new.get(edge, edge) for edge in face.edges]
             self.add_face(edges)
@@ -221,8 +277,8 @@ class ModelStep(object):
                 if fe.v1 == v_old: fe.v1 = v_new
                 if fe.v2 == v_old: fe.v2 = v_new
 
-    def _adjust_vertex_to_old_position(self, v):
-        for edge in self.model.edges:
+    def _adjust_vertex_to_old_position(self, group, v):
+        for edge in self.model.get_edges(group):
             if edge.v1 == v: return edge.v1
             if edge.v2 == v: return edge.v2
         return v
@@ -233,7 +289,7 @@ class ModelStep(object):
             if isinstance(fe, Edge) and fe.v1 == fe.v2:
                 self.fe_add.remove(fe)
                 v = (fe.v1 + fe.v2) * 0.5     # they may not be *exactly* equal
-                v = self._adjust_vertex_to_old_position(v)
+                v = self._adjust_vertex_to_old_position(fe.group, v)
                 self._adjust(fe.v1, v)
                 self._adjust(fe.v2, v)
         for fe in self.fe_add[:]:
@@ -242,18 +298,38 @@ class ModelStep(object):
                 if len(fe.edges) == 0:
                     self.fe_add.remove(fe)
 
-    def _all_active_edges(self):
-        all_edges = set(self.model.edges) - self.fe_remove
+    def _all_groups(self):
+        all_groups = self.model.get_groups()
         for fe in self.fe_add:
-            if isinstance(fe, Edge):
+            all_groups.add(fe.group)
+        return all_groups
+
+    def _all_changed_groups(self):
+        all_groups = set()
+        for fe in self.fe_remove:
+            all_groups.add(fe.group)
+        for fe in self.fe_add:
+            all_groups.add(fe.group)
+        return all_groups
+
+    def _all_removed_groups(self):
+        all_groups = set()
+        for fe in self.fe_remove:
+            all_groups.add(fe.group)
+        return all_groups
+
+    def _all_active_edges(self, group):
+        all_edges = set(self.model.get_edges(group)) - self.fe_remove
+        for fe in self.fe_add:
+            if isinstance(fe, Edge) and fe.group is group:
                 assert fe not in self.fe_remove
                 all_edges.add(fe)
         return all_edges
 
-    def _all_active_faces(self):
-        all_faces = set(self.model.faces) - self.fe_remove
+    def _all_active_faces(self, group):
+        all_faces = set(self.model.get_faces(group)) - self.fe_remove
         for fe in self.fe_add:
-            if isinstance(fe, Face):
+            if isinstance(fe, Face) and fe.group is group:
                 assert fe not in self.fe_remove
                 all_faces.add(fe)
         return all_faces
@@ -262,10 +338,10 @@ class ModelStep(object):
         assert isinstance(edge, Edge)
         assert edge not in self.fe_remove
         self.fe_remove.add(edge)
-        copy = Edge(edge.v1, edge.v2)
+        copy = Edge(edge.group, edge.v1, edge.v2)
         self.fe_add.append(copy)
         #
-        for face in self._all_active_faces():
+        for face in self._all_active_faces(edge.group):
             if edge in face.edges:
                 try:
                     self.fe_add.remove(face)
@@ -277,11 +353,11 @@ class ModelStep(object):
                 self.fe_add.append(Face(edges))
         return copy
 
-    def consolidate_subdivide_edges(self):
+    def consolidate_subdivide_edges_group(self, group):
         # find edges in the existing model that need to be split, and remove-readd them
         for fe in self.fe_add:
-            if isinstance(fe, Edge):
-                for edge in self.model.edges:
+            if isinstance(fe, Edge) and fe.group is group:
+                for edge in self.model.get_edges(group):
                     if edge in self.fe_remove:
                         continue
                     point = edge.intersect_edge(fe)
@@ -292,17 +368,17 @@ class ModelStep(object):
         #
         # find pairs (fe, edge), where the 'edge' cuts 'fe' in two
         progress = False
-        all_edges = self._all_active_edges()
+        all_edges = self._all_active_edges(group)
         for i, fe in enumerate(self.fe_add):
-            if isinstance(fe, Edge):
+            if isinstance(fe, Edge) and fe.group is group:
                 for edge in all_edges:
                     point = edge.intersect_edge(fe)
                     if point is None:
                         continue
                     if abs(point - fe.v1) > 2 * EPSILON and abs(point - fe.v2) > 2 * EPSILON:
                         del self.fe_add[i]
-                        fe1 = Edge(fe.v1, point)
-                        fe2 = Edge(point, fe.v2)
+                        fe1 = Edge(group, fe.v1, point)
+                        fe2 = Edge(group, point, fe.v2)
                         self.fe_add.append(fe1)
                         self.fe_add.append(fe2)
                         for fef in self.fe_add:
@@ -317,7 +393,14 @@ class ModelStep(object):
                         progress = True
         return progress
 
+    def consolidate_subdivide_edges(self):
+        progress = False
+        for group in self._all_changed_groups():
+            progress |= self.consolidate_subdivide_edges_group(group)
+        return progress
+
     def _consolidate_subdivide_face(self, face, edge):
+        assert face.group is edge.group
         if face in self.fe_remove or edge in self.fe_remove:
             return False
         if not edge.in_plane(face.plane):
@@ -347,7 +430,7 @@ class ModelStep(object):
             if e.point_is_inside(middle):
                 return False
         seen_points = GeometryDict()
-        all_edges = self._all_active_edges()
+        all_edges = self._all_active_edges(face.group)
         choices = []
 
         while True:
@@ -402,28 +485,36 @@ class ModelStep(object):
             i = (i + 1) % len(face.edges)
 
         for k in range(len(current_branch) - 1, 0, -1):
-            edges1.append(self.add_edge(current_branch[k], current_branch[k - 1]))
+            edges1.append(self.add_edge(face.group, current_branch[k], current_branch[k - 1]))
 
         for k in range(len(current_branch) - 1):
-            edges2.append(self.add_edge(current_branch[k], current_branch[k + 1]))
+            edges2.append(self.add_edge(face.group, current_branch[k], current_branch[k + 1]))
 
         self.fe_remove.add(face)
         self.add_face(edges1)
         self.add_face(edges2)
         return True
 
-    def consolidate_subdivide_faces(self):
+    def consolidate_subdivide_faces_group(self, group):
         progress = False
-        all_faces = self._all_active_faces()
-        all_edges = self._all_active_edges()
+        all_faces = self._all_active_faces(group)
+        all_edges = self._all_active_edges(group)
         for fe in self.fe_add:
+            if fe.group is not group:
+                continue
             if isinstance(fe, Edge):
                 for face in all_faces:
                     progress |= self._consolidate_subdivide_face(face, fe)
             elif isinstance(fe, Face):
                 for edge in all_edges:
                     progress |= self._consolidate_subdivide_face(fe, edge)
+        return progress
 
+    def consolidate_subdivide_faces(self):
+        progress = False
+        for group in self._all_changed_groups():
+            progress |= self.consolidate_subdivide_faces_group(group)
+        #
         # normalize: kill faces that are both added and removed
         if progress:
             add_remain = []
@@ -455,30 +546,44 @@ class ModelStep(object):
         self.check_valid()
 
         # - remove the caches
-        self.model.caches.clear()
+        for group in self.model.get_groups():
+            group.caches.clear()
+
+        # - remove empty groups
+        for key, value in self.model.group_edges.items():
+            if len(value) == 0:
+                del self.model.group_edges[key]
+        for key, value in self.model.group_faces.items():
+            if len(value) == 0:
+                del self.model.group_faces[key]
+
         #self._dump()
 
     def check_valid(self):
-        # - assert that all the edges of the faces are present
-        all_edges = self._all_active_edges()
+        # - assert that all the edges of the faces are present in the same group
+        group_edges = {}
         for fe in self.fe_add:
             if isinstance(fe, Face):
+                try:
+                    all_edges = group_edges[fe.group]
+                except KeyError:
+                    all_edges = group_edges[fe.group] = self._all_active_edges(fe.group)
                 for edge in fe.edges:
                     assert edge in all_edges
         # - assert that we don't remove anything not present
         for fe in self.fe_remove:
             if isinstance(fe, Face):
-                assert fe in self.model.faces
+                assert fe in self.model.get_faces(fe.group)
             elif isinstance(fe, Edge):
-                assert fe in self.model.edges
+                assert fe in self.model.get_edges(fe.group)
             else:
                 raise TypeError(type(fe))
         # - assert that we don't add something already there
         for fe in self.fe_add:
             if isinstance(fe, Face):
-                assert fe not in self.model.faces
+                assert fe not in self.model.get_faces(fe.group)
             elif isinstance(fe, Edge):
-                assert fe not in self.model.edges
+                assert fe not in self.model.get_edges(fe.group)
             else:
                 raise TypeError(type(fe))
 

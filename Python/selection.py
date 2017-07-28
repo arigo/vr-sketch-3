@@ -207,19 +207,19 @@ def marginal_increase(dist):
     else:
         return dist * 1.01
 
-def find_closest(app, position, ignore=()):
+def find_closest(app, position, ignore=(), only_group=None):
     for attempt in [find_closest_vertex, find_closest_edge, find_closest_face]:
         if attempt in ignore:
             continue
-        result = attempt(app, position, ignore=ignore)
+        result = attempt(app, position, ignore=ignore, only_group=only_group)
         if result is not None:
             return result
     return SelectVoid(app, position)
-    
-def find_closest_vertex(app, position, ignore=()):
+
+def find_closest_vertex(app, position, ignore=(), only_group=None):
     closest = None
     distance_min = app.scale_ctrl(DISTANCE_VERTEX_MIN)
-    for v in app.model.all_vertices():
+    for v in app.model.all_vertices(only_group):
         if v in ignore:
             continue
         distance = abs(position - v)
@@ -228,10 +228,10 @@ def find_closest_vertex(app, position, ignore=()):
             closest = SelectVertex(app, v)
     return closest
 
-def find_closest_edge(app, position, ignore=()):
+def find_closest_edge(app, position, ignore=(), only_group=None):
     closest = None
     distance_min = app.scale_ctrl(DISTANCE_EDGE_MIN)
-    for e in app.model.edges:
+    for e in app.model.all_edges(only_group):
         if e in ignore:
             continue
         frac, distance = e.measure_distance(position)
@@ -242,10 +242,10 @@ def find_closest_edge(app, position, ignore=()):
             closest = SelectAlongEdge(app, e, frac)
     return closest
 
-def find_closest_face(app, position, ignore=()):
+def find_closest_face(app, position, ignore=(), only_group=None):
     closest = None
     distance_min = app.scale_ctrl(DISTANCE_FACE_MIN)
-    for face in app.model.faces:
+    for face in app.model.all_faces(only_group):
         if face in ignore:
             continue
         signed_distance = face.plane.signed_distance_to_point(position)

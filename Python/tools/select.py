@@ -14,11 +14,12 @@ class Select(BaseTool):
                 continue
 
             closest = selection.find_closest(self.app, ctrl.position,
-                        ignore=set([selection.find_closest_vertex]))
+                        ignore=set([selection.find_closest_vertex]),
+                        only_group=self.app.curgroup)
             edges = closest.individual_edges()
             edges = set(edges)
             for e in list(edges):
-                for e1 in self.app.model.edges:
+                for e1 in self.app.getcuredges():
                     if e1.v1 == e.v2 and e1.v2 == e.v1:
                         edges.add(e1)
 
@@ -91,7 +92,7 @@ class Select(BaseTool):
                     z1 <= v.z <= z2)
 
         self.app.selected_edges.clear()
-        for edge in self.app.model.edges:
+        for edge in self.app.getcuredges():
             if in_box(edge.v1) and in_box(edge.v2):
                 self.app.selected_edges.add(edge)
         self.app.selection_updated()

@@ -11,7 +11,7 @@ class Move(BaseTool):
 
     def handle_hover(self, controllers):
         for ctrl in controllers:
-            closest = selection.find_closest(self.app, ctrl.position)
+            closest = selection.find_closest(self.app, ctrl.position, only_group=self.app.curgroup)
             if isinstance(closest, selection.SelectVoid):
                 self.app.flash(MovePointer(ctrl.position, ctrl))
                 continue
@@ -160,7 +160,7 @@ class Move(BaseTool):
                 move_vertices[edge.v2] = True
 
         self.move_vertices = move_vertices
-        self.move_edges = set([edge for edge in self.app.model.edges
+        self.move_edges = set([edge for edge in self.app.getcuredges()
                                     if edge.v1 in move_vertices or edge.v2 in move_vertices])
         self.move_faces = []
 
@@ -169,7 +169,7 @@ class Move(BaseTool):
         self.source_position = closest.get_subspace().project_point_inside(ctrl.position)
         subspace = WholeSpace()
 
-        for face in self.app.model.faces:
+        for face in self.app.getcurfaces():
             for edge in face.edges:
                 if edge in self.move_edges:
                     break

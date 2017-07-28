@@ -11,7 +11,8 @@ class Pushpull(BaseTool):
     def handle_hover(self, controllers):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position,
-                        ignore=(selection.find_closest_vertex, selection.find_closest_edge))
+                        ignore=set([selection.find_closest_vertex, selection.find_closest_edge]),
+                        only_group=self.app.curgroup)
             self.app.flash(PushPullPointer(closest.get_point(), ctrl))
             closest.flash_flat(selection.ADD_COLOR)
 
@@ -123,7 +124,7 @@ class Pushpull(BaseTool):
         self.remove_original_face = True
         for edge in self.source_face.edges:
             found_continuation_face = False
-            for face in self.app.model.faces:
+            for face in self.app.getcurfaces():
                 if face == self.source_face:
                     continue
                 for e1 in face.edges:

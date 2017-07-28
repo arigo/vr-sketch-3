@@ -10,7 +10,8 @@ class Eraser(BaseTool):
     def handle_hover(self, controllers):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position,
-                        ignore=set([selection.find_closest_vertex]))
+                        ignore=set([selection.find_closest_vertex]),
+                        only_group=self.app.curgroup)
             self.app.flash(EraserPointer(closest.get_point(), ctrl))
 
             edges = set()
@@ -41,12 +42,13 @@ class Eraser(BaseTool):
             text.append("-%d edge%s" % (len(edges), "s" * (len(edges) > 1)))
 
         for edge in list(edges):
-            for e1 in self.app.model.edges:
+            assert edge.group is self.app.curgroup
+            for e1 in self.app.getcuredges():
                 if ((edge.v1 == e1.v1 and edge.v2 == e1.v2) or
                     (edge.v1 == e1.v2 and edge.v2 == e1.v1)):
                     edges.add(e1)
         for edge in edges:
-            for face in self.app.model.faces:
+            for face in self.app.getcurfaces():
                 if edge in face.edges:
                     faces.add(face)
 

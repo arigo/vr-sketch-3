@@ -16,9 +16,9 @@ class Copy(BaseTemporaryTool):
         if not move_vertices:
             return False
 
-        move_edges = set([edge for edge in self.app.model.edges
+        move_edges = set([edge for edge in self.app.getcuredges()
                                if edge.v1 in move_vertices and edge.v2 in move_vertices])
-        move_faces = [face for face in self.app.model.faces
+        move_faces = [face for face in self.app.getcurfaces()
                            if all(e in move_edges for e in face.edges)]
 
         self.move_vertices = move_vertices

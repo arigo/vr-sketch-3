@@ -10,12 +10,13 @@ class Line(BaseTool):
 
     def handle_hover(self, controllers):
         for ctrl in controllers:
-            closest = selection.find_closest(self.app, ctrl.position)
+            closest = selection.find_closest(self.app, ctrl.position, only_group=self.app.curgroup)
             self.app.flash(PencilPointer(closest.get_point(), ctrl))
 
             new_vertices = None
             if isinstance(closest, selection.SelectVoid):
-                new_vertices = face_reduction.potential_new_face(self.app.model, closest.get_point(),
+                new_vertices = face_reduction.potential_new_face(self.app.model, self.app.curgroup,
+                                                                 closest.get_point(),
                                                                  max_distance = 0.95 * selection.DISTANCE_FACE_MIN)
                 if new_vertices is not None:
                     self.app.flash(PolygonHighlight(new_vertices, color = selection.TargetColorScheme.FACE))

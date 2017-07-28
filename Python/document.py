@@ -1,6 +1,6 @@
 import os
 import json
-from model import Edge, Face, Model, ModelStep
+from model import Edge, Face, Model, ModelStep, Group
 from util import Vector3
 
 HEADER = "vrsketch"
@@ -47,6 +47,20 @@ class VRSketchFile(object):
         if header.get("a") != HEADER:
             raise ValueError(header.get("a"))
         #
+        def find_group_name(grname):
+            try:
+                group = subgroups_by_gid[grname]
+            except KeyError:
+                if "/" in grname:
+                    parent_name, name = grname.rsplit("/", 1)
+                    parent_group = find_group_name(parent_name)
+                else:
+                    name = grname
+                    parent_group = self.model.root_group
+                group = subgroups_by_gid[grname] = Group(parent_group, gid=int(name))
+            return group
+        subgroups_by_gid = {}
+        #
         edges_by_eid = {}
         faces_by_fid = {}
         for pos, entry in enum:
@@ -72,7 +86,11 @@ class VRSketchFile(object):
                         eid = int(add_id[1:])
                         v1 = Vector3(*add1["v1"])
                         v2 = Vector3(*add1["v2"])
-                        item = Edge(v1, v2, eid=eid)
+                        if "group" in add1:
+                            grname = find_group_name(add1["group"])
+                        else:
+                            group = self.model.root_group
+                        item = Edge(group, v1, v2, eid=eid)
                         edges_by_eid[eid] = item
                     elif add_id.startswith('f'):
                         fid = int(add_id[1:])
@@ -163,11 +181,23 @@ def write_model_step(f, model_step):
     if model_step.fe_add:
         adds1 = []
         adds2 = []
+        root_group = model_step.model.root_group
+        repr_group = {}
         for fe in model_step.fe_add:
             if isinstance(fe, Edge):
-                adds1.append({"id": "e%d" % fe.eid,
-                              "v1": fe.v1.tolist(),
-                              "v2": fe.v2.tolist()})
+                d = {"id": "e%d" % fe.eid,
+                     "v1": fe.v1.tolist(),
+                     "v2": fe.v2.tolist()}
+                if fe.group is not root_group:
+                    if fe.group not in repr_group:
+                        gr = fe.group
+                        items = []
+                        while gr is not None:
+                            items.append(str(gr.gid))
+                            gr = gr.parent
+                        repr_group[fe.group] = '/'.join(reversed(items))
+                    d["group"] = repr_group[fe.group]
+                add1.append(d)
             elif isinstance(fe, Face):
                 edges = ["e%d" % e.eid for e in fe.edges]
                 adds2.append({"id": "f%d" % fe.fid,
