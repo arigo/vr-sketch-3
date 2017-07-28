@@ -6,5 +6,5 @@ Use
     python ..\Python\vrconv.py  INPUTFILE  OUTPUTFILE
 
 to convert between a .vrsketch and a .skp (SketchUp) file.  Note that many
-features in the .skp file are lost in this conversion.  Careful, the
-OUTPUTFILE is silently overwritten.
+features in the .skp file are lost in this conversion.  If OUTPUTFILE
+already exists, the old version is first renamed to ``OUTPUTFILE~``.
