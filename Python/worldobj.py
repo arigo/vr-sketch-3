@@ -51,11 +51,15 @@ class SmallSphere(WorldObject):
 class RectanglePointer(WorldObject):
     _kind = 201
 
-    def __init__(self, position):
+    def __init__(self, position, controller=None):
         self.position = position
+        self.controller = controller
 
     def getrawdata(self):
-        return self.position.tolist()
+        lst = self.position.tolist()
+        if self.controller is not None:
+            lst.append(self.controller._index)
+        return lst
 
 class CrossPointer(RectanglePointer):
     _kind = 202

@@ -8,7 +8,7 @@ public class CylinderObject : WorldObject
     public float y_scale;
     static MaterialCache mcache;
 
-    public override void UpdateWorldObject(float[] data)
+    public override void UpdateWorldObject(WorldScript ws, float[] data)
     {
         if (mcache == null)
             mcache = new MaterialCache(GetComponentInChildren<MeshRenderer>().sharedMaterial);

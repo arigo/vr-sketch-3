@@ -69,6 +69,13 @@ public class WorldScript : MonoBehaviour
             controller == active_controllers[check_index];
     }
 
+    public Controller ControllerByIndex(int index)
+    {
+        if (index < 0 || index >= active_controllers.Length)
+            return null;
+        return active_controllers[index];
+    }
+
     public void ManualEnter(int token, float value)
     {
         if (token >= 0)
@@ -103,7 +110,7 @@ public class WorldScript : MonoBehaviour
         }
 
         if (wo != null)
-            wo.UpdateWorldObject(data);
+            wo.UpdateWorldObject(this, data);
     }
 
     private void Update()

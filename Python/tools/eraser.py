@@ -11,7 +11,7 @@ class Eraser(BaseTool):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position,
                         ignore=set([selection.find_closest_vertex]))
-            self.app.flash(EraserPointer(closest.get_point()))
+            self.app.flash(EraserPointer(closest.get_point(), ctrl))
 
             edges = set()
             faces = set()

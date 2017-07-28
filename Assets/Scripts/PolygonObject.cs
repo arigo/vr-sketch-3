@@ -10,7 +10,7 @@ public class PolygonObject : WorldObject
     static MaterialCache mcache;
     static MaterialCache mcache_highlight;
 
-    public override void UpdateWorldObject(float[] data)
+    public override void UpdateWorldObject(WorldScript ws, float[] data)
     {
         var vertices = new Vector3[data.Length / 3];
         for (int i = 0; i < vertices.Length; i++)

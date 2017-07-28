@@ -17,7 +17,7 @@ class Rectangle(BaseTool):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position)
             if isinstance(closest, selection.SelectVoid):
-                self.app.flash(RectanglePointer(ctrl.position))
+                self.app.flash(RectanglePointer(ctrl.position, ctrl))
             else:
                 closest.flash(selection.HoverColorScheme)
 
@@ -62,7 +62,7 @@ class Rectangle(BaseTool):
             if not isinstance(closest2.get_subspace(), SinglePoint):
                 if abs(other_ctrl.position - self.initial_selection.get_point()) < selection.DISTANCE_VERTEX_MIN:
                     closest2 = selection.SelectVertex(self.app, self.initial_selection.get_point())
-            self.app.flash(CrossPointer(closest2.get_point()))
+            self.app.flash(CrossPointer(closest2.get_point(), other_ctrl))
 
             # Get the "guides" from the other controller's selection, which are
             # affine subspaces, and find if we're close to one of them

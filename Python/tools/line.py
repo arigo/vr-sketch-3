@@ -11,7 +11,7 @@ class Line(BaseTool):
     def handle_hover(self, controllers):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position)
-            self.app.flash(PencilPointer(closest.get_point()))
+            self.app.flash(PencilPointer(closest.get_point(), ctrl))
 
             new_vertices = None
             if isinstance(closest, selection.SelectVoid):
@@ -74,7 +74,7 @@ class Line(BaseTool):
             if not isinstance(closest2.get_subspace(), SinglePoint):
                 if abs(other_ctrl.position - self.source_position) < selection.DISTANCE_VERTEX_MIN:
                     closest2 = selection.SelectVertex(self.app, self.source_position)
-            self.app.flash(CrossPointer(closest2.get_point()))
+            self.app.flash(CrossPointer(closest2.get_point(), other_ctrl))
 
             # Get the "guides" from the other controller's selection, which are
             # affine subspaces, and find if we're close to one of them

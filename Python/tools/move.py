@@ -13,7 +13,7 @@ class Move(BaseTool):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position)
             if isinstance(closest, selection.SelectVoid):
-                self.app.flash(MovePointer(ctrl.position))
+                self.app.flash(MovePointer(ctrl.position, ctrl))
                 continue
             closest.flash(selection.BluishHoverColorScheme)
             if ctrl.trigger_pressed():
@@ -72,7 +72,7 @@ class Move(BaseTool):
         selection_guides = []
         if other_ctrl is not None:
             closest2 = selection.find_closest(self.app, other_ctrl.position)
-            self.app.flash(CrossPointer(closest2.get_point()))
+            self.app.flash(CrossPointer(closest2.get_point(), other_ctrl))
 
             # Get the "guides" from the other controller's selection, which are
             # affine subspaces, and find if one of the vertices we're moving is

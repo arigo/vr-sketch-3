@@ -12,7 +12,7 @@ class Pushpull(BaseTool):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position,
                         ignore=(selection.find_closest_vertex, selection.find_closest_edge))
-            self.app.flash(PushPullPointer(closest.get_point()))
+            self.app.flash(PushPullPointer(closest.get_point(), ctrl))
             closest.flash_flat(selection.ADD_COLOR)
 
             if ctrl.trigger_pressed() and isinstance(closest, selection.SelectOnFace):
@@ -58,7 +58,7 @@ class Pushpull(BaseTool):
         # If the other controller is over a position, guide orthogonally.
         if other_ctrl is not None:
             closest2 = selection.find_closest(self.app, other_ctrl.position)
-            self.app.flash(CrossPointer(closest2.get_point()))
+            self.app.flash(CrossPointer(closest2.get_point(), other_ctrl))
             #ortho = False
             #subspace1 = None
             #if isinstance(closest2, selection.SelectOnFace):

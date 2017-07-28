@@ -32,7 +32,7 @@ class Select(BaseTool):
                     cls = SelectPointerMinus
                     color = selection.SELECTED_COLOR
                 closest.flash_flat(color)
-            self.app.flash(cls(closest.get_point()))
+            self.app.flash(cls(closest.get_point(), ctrl))
 
             if ctrl.trigger_pressed():
                 if edges:

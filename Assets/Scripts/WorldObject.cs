@@ -7,7 +7,7 @@ public abstract class WorldObject : MonoBehaviour
 {
     public WorldScript.Kind kind;
 
-    public abstract void UpdateWorldObject(float[] data);
+    public abstract void UpdateWorldObject(WorldScript ws, float[] data);
 
     static public Vector3 GetVec3(float[] data, int index)
     {

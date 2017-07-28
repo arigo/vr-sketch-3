@@ -98,7 +98,7 @@ public class TextHint : WorldObject
             textMesh.color = selectedColor;
     }
 
-    public override void UpdateWorldObject(float[] data)
+    public override void UpdateWorldObject(WorldScript ws, float[] data)
     {
         int index = 0;
         textMesh.text = GetString(data, ref index);
