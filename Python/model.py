@@ -137,9 +137,32 @@ class Model(object):
         self.group_faces = {}     # {Group: list-of-Faces}
 
     def get_edges(self, group):
+        if isinstance(group, set):
+            result = []
+            for gr1 in group:
+                result += self.get_edges(gr1)
+            return result
+        assert isinstance(group, Group)
         return self.group_edges.setdefault(group, [])
 
+    def get_edges_with_group(self, group):
+        if group is None:
+            group = set(self.group_edges)
+        elif not isinstance(group, set):
+            group = (group,)
+        result = []
+        for gr1 in group:
+            for edge in self.get_edges(gr1):
+                result.append((edge, gr1))
+        return result
+
     def get_faces(self, group):
+        if isinstance(group, set):
+            result = []
+            for gr1 in group:
+                result += self.get_faces(gr1)
+            return result
+        assert isinstance(group, Group)
         return self.group_faces.setdefault(group, [])
 
     def get_groups(self):
@@ -152,6 +175,13 @@ class Model(object):
         for edge in self.all_edges(only_group):
             result.append(edge.v1)
             result.append(edge.v2)
+        return result
+
+    def all_vertices_with_group(self, only_group):
+        result = []
+        for edge, group in self.get_edges_with_group(only_group):
+            result.append((edge.v1, group))
+            result.append((edge.v2, group))
         return result
 
     def all_edges(self, only_group=None):
@@ -170,6 +200,34 @@ class Model(object):
             result += value
         return result
 
+    def get_bounding_box(self, group=None, extra=0.):
+        try:
+            vmin, vmax = group.caches['bounding_box']
+        except KeyError:
+            v_list = self.all_vertices(group)
+            if not v_list:
+                return Vector3(0., 0., 0.), Vector3(0., 0., 0.)
+            vmin = Vector3(min(v.x for v in v_list),
+                           min(v.y for v in v_list),
+                           min(v.z for v in v_list))
+            vmax = Vector3(max(v.x for v in v_list),
+                           max(v.y for v in v_list),
+                           max(v.z for v in v_list))
+            group.caches['bounding_box'] = vmin, vmax
+        return (Vector3(vmin.x - extra, vmin.y - extra, vmin.z - extra),
+                Vector3(vmax.x + extra, vmax.y + extra, vmax.z + extra))
+
+    def get_subgroups(self, group):
+        try:
+            return group.caches['subgroups']
+        except KeyError:
+            result = set()
+            for gr1 in self.get_groups():
+                if gr1.issubgroup(group):
+                    result.add(gr1)
+            group.caches['subgroups'] = result
+            return result
+
 
 class Group(object):
     _NUMBER = 1
@@ -185,6 +243,14 @@ class Group(object):
 
     def __repr__(self):
         return '<Group %d>' % (self.gid,)
+
+    def issubgroup(self, parentgroup):
+        while True:
+            if self is parentgroup:
+                return True
+            self = self.parent
+            if self is None:
+                return False
 
 
 class ModelStep(object):
@@ -213,6 +279,10 @@ class ModelStep(object):
             app.selection_updated()
 
     def _apply_to_model(self):
+        # - first, remove the caches
+        for group in self.model.get_groups():
+            group.caches.clear()
+        #
         fe_remove = self.fe_remove
         for group in self._all_removed_groups():
             edges = self.model.get_edges(group)
@@ -253,16 +323,11 @@ class ModelStep(object):
     def remove(self, edge_or_face):
         self.fe_remove.add(edge_or_face)
 
-    def move_vertices(self, old2new, move_edges, move_faces):
+    def _move_by(self, map_v, move_edges, move_faces):
         self.fe_remove.update(move_edges)
         self.fe_remove.update(move_faces)
         edges_old2new = {}
 
-        def map_v(v):
-            for v_old, v_new in old2new:
-                if v_old == v:
-                    return v_new
-            return v
         # xxx bad complexity here
         for edge in move_edges:
             edges_old2new[edge] = self.add_edge(edge.group, map_v(edge.v1), map_v(edge.v2),
@@ -270,6 +335,20 @@ class ModelStep(object):
         for face in move_faces:
             edges = [edges_old2new.get(edge, edge) for edge in face.edges]
             self.add_face(edges)
+
+    def move_vertices(self, old2new, move_edges, move_faces):
+        def map_v(v):
+            for v_old, v_new in old2new:
+                if v_old == v:
+                    return v_new
+            return v
+        self._move_by(map_v, move_edges, move_faces)
+
+    def move_group_and_subgroups(self, start_group, delta):
+        for group in self.model.get_subgroups(start_group):
+            move_edges = self.model.get_edges(group)
+            move_faces = self.model.get_faces(group)
+            self._move_by(lambda v: v + delta, move_edges, move_faces)
 
     def _adjust(self, v_old, v_new):
         for fe in self.fe_add:
@@ -544,10 +623,6 @@ class ModelStep(object):
         # XXX NOT IMPLEMENTED YET
 
         self.check_valid()
-
-        # - remove the caches
-        for group in self.model.get_groups():
-            group.caches.clear()
 
         # - remove empty groups
         for key, value in self.model.group_edges.items():

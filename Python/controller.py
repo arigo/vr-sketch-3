@@ -45,7 +45,7 @@ class ControllersMgr(object):
         self.controllers = []
         self.controllers_cache = {}
         self.tool = None
-        self.load_tool("rectangle")
+        self.load_tool("select")
 
     def load_tool(self, name):
         module = __import__("tools.%s" % name, None, None, [name])

@@ -13,8 +13,10 @@ class Move(BaseTool):
         for ctrl in controllers:
             closest = selection.find_closest(self.app, ctrl.position, only_group=self.app.curgroup)
             if isinstance(closest, selection.SelectVoid):
-                self.app.flash(MovePointer(ctrl.position, ctrl))
-                continue
+                closest = selection.find_subgroup(self.app, ctrl.position)
+                if isinstance(closest, selection.SelectVoid):
+                    self.app.flash(MovePointer(ctrl.position, ctrl))
+                    continue
             closest.flash(selection.BluishHoverColorScheme)
             if ctrl.trigger_pressed():
                 return self.start_movement(ctrl, closest)    # start
@@ -123,13 +125,19 @@ class Move(BaseTool):
         # Actually move the vertex
         delta = closest.get_point() - self.source_position
         old2new = [(v, v + delta) for v in self.move_vertices]
-        
-        if len(self.move_vertices) == 1:
+
+        if len(self.move_subgroups) == 1:
+            name = 'Move group'
+        elif len(self.move_subgroups) > 1:
+            name = 'Move %d groups' % (len(self.move_subgroups),)
+        elif len(self.move_vertices) == 1:
             name = 'Move vertex'
         else:
             name = 'Move %d vertices' % (len(self.move_vertices),)
         self.model_step = ModelStep(self.app.model, name)
         self.model_step.move_vertices(old2new, self.move_edges, self.move_faces)
+        for g in self.move_subgroups:
+            self.model_step.move_group_and_subgroups(g, delta)
         self.app.execute_temporary_step(self.model_step)
 
         # Add the distance hint
@@ -148,21 +156,28 @@ class Move(BaseTool):
         move_vertices = GeometryDict()
         for v in closest.individual_vertices():
             move_vertices[v] = True
-        if not move_vertices:
-            return None
 
+        move_subgroups = set()
         common_vertices = False
         for edge in self.app.selected_edges:
             common_vertices = common_vertices or edge.v1 in move_vertices or edge.v2 in move_vertices
+        if isinstance(closest, selection.SelectGroup):
+            move_subgroups.add(closest.group)
+            common_vertices = common_vertices or closest.group in self.app.selected_subgroups
         if common_vertices:
             for edge in self.app.selected_edges:
                 move_vertices[edge.v1] = True
                 move_vertices[edge.v2] = True
+            move_subgroups.update(self.app.selected_subgroups)
+
+        if not move_vertices and not move_subgroups:
+            return None
 
         self.move_vertices = move_vertices
         self.move_edges = set([edge for edge in self.app.getcuredges()
                                     if edge.v1 in move_vertices or edge.v2 in move_vertices])
         self.move_faces = []
+        self.move_subgroups = move_subgroups
 
         # compute the subspace inside which it's ok to move: we must not make any 
         # existing face non-planar

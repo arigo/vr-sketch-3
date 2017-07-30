@@ -1,6 +1,6 @@
 from worldobj import SelectPointer, SelectPointerPlus, SelectPointerMinus, Stem
 from util import Vector3
-from model import ModelStep
+from model import ModelStep, Group
 import selection
 from .base import BaseTool
 
@@ -16,17 +16,26 @@ class Select(BaseTool):
             closest = selection.find_closest(self.app, ctrl.position,
                         ignore=set([selection.find_closest_vertex]),
                         only_group=self.app.curgroup)
-            edges = closest.individual_edges()
-            edges = set(edges)
-            for e in list(edges):
-                for e1 in self.app.getcuredges():
-                    if e1.v1 == e.v2 and e1.v2 == e.v1:
-                        edges.add(e1)
+            operation = 0
+            if isinstance(closest, selection.SelectVoid):
+                closest = selection.find_subgroup(self.app, ctrl.position)
+                if isinstance(closest, selection.SelectGroup):
+                    operation = -1 if closest.group in self.app.selected_subgroups else 1
+                    op_arg = closest.group
+            else:
+                edges = closest.individual_edges()
+                edges = set(edges)
+                for e in list(edges):
+                    for e1 in self.app.getcuredges():
+                        if e1.v1 == e.v2 and e1.v2 == e.v1:
+                            edges.add(e1)
+                if edges:
+                    operation = 1 if any(edges - self.app.selected_edges) else -1
+                    op_arg = edges
 
-            edges_add = any(edges - self.app.selected_edges)
             cls = SelectPointer
-            if edges:
-                if edges_add:
+            if operation != 0:
+                if operation == 1:
                     cls = SelectPointerPlus
                     color = selection.ADD_COLOR
                 else:
@@ -36,24 +45,28 @@ class Select(BaseTool):
             self.app.flash(cls(closest.get_point(), ctrl))
 
             if ctrl.trigger_pressed():
-                if edges:
-                    if edges_add:
-                        self.action_add(edges)
-                    else:
-                        self.action_remove(edges)
+                if operation != 0:
+                    self.action(operation, op_arg)
                     return None
                 else:
                     return self.start_box_select(ctrl)
 
         return None
 
-    def action_add(self, edges):
-        self.app.selected_edges.update(edges)
-        self.app.selection_updated()
-
-    def action_remove(self, edges):
-        self.app.selected_edges.difference_update(edges)
-        self.app.selection_updated()
+    def action(self, operation, op_arg):
+        if isinstance(op_arg, Group):
+            if operation == 1:
+                self.app.selected_subgroups.add(op_arg)
+            else:
+                self.app.selected_subgroups.remove(op_arg)
+            also_faces = True
+        else:
+            if operation == 1:
+                self.app.selected_edges.update(op_arg)
+            else:
+                self.app.selected_edges.difference_update(op_arg)
+            also_faces = False
+        self.app.selection_updated(also_faces=also_faces)
 
     def start_box_select(self, ctrl):
         self.source_position = ctrl.position
@@ -92,7 +105,8 @@ class Select(BaseTool):
                     z1 <= v.z <= z2)
 
         self.app.selected_edges.clear()
+        self.app.selected_subgroups.clear()
         for edge in self.app.getcuredges():
             if in_box(edge.v1) and in_box(edge.v2):
                 self.app.selected_edges.add(edge)
-        self.app.selection_updated()
+        self.app.selection_updated(also_faces=True)

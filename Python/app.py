@@ -21,6 +21,7 @@ class App(object):
         self.manual_tokens = weakref.WeakKeyDictionary()
         self.next_manual_token = 1
         self.selected_edges = set()
+        self.selected_subgroups = set()
         self.open(initial_filename)
 
     def open(self, filename):
@@ -57,9 +58,19 @@ class App(object):
                         wo = worldobj.SelectedStem(edge_or_face.v1, edge_or_face.v2)
                         break
             if wo is None:
-                wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2)
+                if edge_or_face.group in self.selected_subgroups:
+                    import selection
+                    color = selection.SelectedGroupColorScheme.EDGE
+                else:
+                    color = None
+                wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2, color)
         elif isinstance(edge_or_face, model.Face):
-            wo = worldobj.Polygon([edge.v1 for edge in edge_or_face.edges])
+            vertices = [edge.v1 for edge in edge_or_face.edges]
+            if edge_or_face.group in self.selected_subgroups:
+                import selection
+                wo = worldobj.ColoredPolygon(vertices, selection.SelectedGroupColorScheme.FACE)
+            else:
+                wo = worldobj.Polygon(vertices)
         else:
             raise AssertionError(repr(edge_or_face))
         self.model2worldobj[edge_or_face] = wo
@@ -79,12 +90,20 @@ class App(object):
         for fe in self.model.all_faces():
             self._add_edge_or_face(fe)
 
-    def selection_updated(self):
+    def selection_updated(self, also_faces=False):
         edges = self.model.all_edges()
+        if also_faces:
+            faces = self.model.all_faces()
+        else:
+            faces = ()
         for edge in edges:
             self._remove_edge_or_face(edge)
+        for face in faces:
+            self._remove_edge_or_face(face)
         for edge in edges:
             self._add_edge_or_face(edge)
+        for face in faces:
+            self._add_edge_or_face(face)
 
     def getcuredges(self):
         return self.model.get_edges(self.curgroup)
@@ -174,19 +193,22 @@ class App(object):
         self.new_submenu(lst)
 
     def _handle_click_edit(self):
-        s = bool(self.selected_edges)
-        g = False   # xxx
+        m = len(self.selected_edges) + len(self.selected_subgroups)
         self.new_submenu([
-            ("copy",         "Copy" if s else "(Copy)"),
-            ("newgroup",     "Make new group" if s else "(Make a new group)"),
-            ("mirrorgroup",  "Mirror group" if g else "(Mirror group)"),
-            ("explodegroup", "Explode group" if g else "(Explode group)"),
+            ("copy",         "Copy" if m > 0 else "(Copy)"),
+            ("newgroup",     "Make new group" if m > 1 else "(Make new group)"),
+            ("mirrorgroup",  "Mirror group" if False else "(Mirror group)"),   #XXX
+            ("explodegroup", "Explode group" if False else "(Explode group)"), #XXX
         ])
 
     def _handle_click_copy(self):
         from tools.copy import Copy
         tool = Copy(self)
         self.ctrlmgr.set_temporary_tool(tool, self.current_menu_ctrl)
+
+    def _handle_click_newgroup(self):
+        import grouping
+        grouping.newgroup(self)
 
 
     def fetch_manual_token(self, owner, key):

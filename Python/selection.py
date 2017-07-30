@@ -32,15 +32,20 @@ class TargetColorScheme:
     FACE   = 0x80FF80
     DARKER_EDGE = 0x00A000
 
+class SelectedGroupColorScheme:
+    EDGE   = 0x3B3F7F
+    FACE   = 0x464C99
+
 ADD_COLOR = 0x40FF40
 SELECTED_COLOR = 0xC070CF
 DELETE_COLOR = 0xFF364B
 
 
 class SelectVertex(object):
-    def __init__(self, app, position):
+    def __init__(self, app, position, group):
         self.app = app
         self.position = position
+        self.group = group
 
     def flash(self, color_scheme):
         self.app.flash(SmallSphere(self.position, color_scheme.VERTEX))
@@ -92,6 +97,7 @@ class SelectAlongEdge(object):
         self.app = app
         self.edge = edge
         self.fraction = fraction    # maybe rounded to exactly 0.5, for the middle
+        self.group = edge.group
 
     def flash(self, color_scheme):
         p1 = self.edge.v1
@@ -143,6 +149,7 @@ class SelectOnFace(object):
         self.app = app
         self.face = face
         self.position = position
+        self.group = face.group
 
     def flash(self, color_scheme):
         self.app.flash(PolygonHighlight([edge.v1 for edge in self.face.edges], color_scheme.FACE))
@@ -201,6 +208,47 @@ class SelectVoid(object):
         return []
 
 
+class SelectGroup(object):
+    def __init__(self, app, group, position):
+        self.app = app
+        self.group = group
+        self.position = position
+
+    def flash(self, color_scheme):
+        self.flash_flat(color_scheme.FACE)
+        self.app.flash(SmallSphere(self.position, color_scheme.FACE))
+
+    def flash_flat(self, color):
+        # xxx use ColoredPolygon with a shader to fix the overlap issue?
+        model = self.app.model
+        for group in model.get_subgroups(self.group):
+            seen = set()
+            for face in model.get_faces(group):
+                self.app.flash(PolygonHighlight([edge.v1 for edge in face.edges], color))
+                seen.update(face.edges)
+            for edge in model.get_edges(group):
+                if edge not in seen:
+                    self.app.flash(PolygonHighlight([edge.v1, edge.v2], color))
+
+    def get_point(self):
+        return self.position
+
+    def get_subspace(self):
+        return SinglePoint(self.position)
+
+    def adjust(self, pt):
+        pass
+
+    def alignment_guides(self):
+        return all_45degree_guides(self.position)
+
+    def individual_vertices(self):
+        return [self.position]
+
+    def individual_edges(self):
+        return []
+
+
 def marginal_increase(dist):
     if isinstance(dist, tuple):
         return dist[:-1] + (dist[-1] * 1.01,)
@@ -219,13 +267,13 @@ def find_closest(app, position, ignore=(), only_group=None):
 def find_closest_vertex(app, position, ignore=(), only_group=None):
     closest = None
     distance_min = app.scale_ctrl(DISTANCE_VERTEX_MIN)
-    for v in app.model.all_vertices(only_group):
+    for v, group in app.model.all_vertices_with_group(only_group):
         if v in ignore:
             continue
         distance = abs(position - v)
         if distance < distance_min:
             distance_min = distance * 1.01
-            closest = SelectVertex(app, v)
+            closest = SelectVertex(app, v, group)
     return closest
 
 def find_closest_edge(app, position, ignore=(), only_group=None):
@@ -254,3 +302,23 @@ def find_closest_face(app, position, ignore=(), only_group=None):
             distance_min = distance * 1.01
             closest = SelectOnFace(app, face, position - face.plane.normal * signed_distance)
     return closest
+
+def find_subgroup(app, position, ignore=()):
+    parent_group = app.curgroup
+    distance_min = app.scale_ctrl(max(DISTANCE_EDGE_MIN, DISTANCE_FACE_MIN))
+    look_groups = set()
+    for group in app.model.get_subgroups(parent_group):
+        if group is parent_group:
+            continue
+        vmin, vmax = app.model.get_bounding_box(group, distance_min)
+        if (position.x < vmin.x or position.y < vmin.y or position.z < vmin.z or
+            position.x > vmax.x or position.y > vmax.y or position.z > vmax.z):
+            continue
+        look_groups.add(group)
+    closest = find_closest(app, position, ignore, only_group=look_groups)
+    if isinstance(closest, SelectVoid):
+        return closest
+    group = closest.group
+    while group.parent is not parent_group:
+        group = group.parent
+    return SelectGroup(app, group, closest.get_point())

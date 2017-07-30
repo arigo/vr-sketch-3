@@ -87,7 +87,7 @@ class VRSketchFile(object):
                         v1 = Vector3(*add1["v1"])
                         v2 = Vector3(*add1["v2"])
                         if "group" in add1:
-                            grname = find_group_name(add1["group"])
+                            group = find_group_name(add1["group"])
                         else:
                             group = self.model.root_group
                         item = Edge(group, v1, v2, eid=eid)
@@ -193,7 +193,7 @@ def write_model_step(f, model_step):
                     if fe.group not in repr_group:
                         gr = fe.group
                         items = []
-                        while gr is not None:
+                        while gr is not root_group:
                             items.append(str(gr.gid))
                             gr = gr.parent
                         repr_group[fe.group] = '/'.join(reversed(items))
