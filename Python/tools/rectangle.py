@@ -7,6 +7,7 @@ from .base import BaseTool
 
 
 class Rectangle(BaseTool):
+    GRAY_OUT_SUBGROUPS = True
 
     def __init__(self, app):
         BaseTool.__init__(self, app)

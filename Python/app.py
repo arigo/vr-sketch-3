@@ -17,12 +17,13 @@ class App(object):
         self.destroy_later = []
         self.num_world_objs = 0
         self.model2worldobj = {}
-        self.ctrlmgr = controller.ControllersMgr(self)
         self.manual_tokens = weakref.WeakKeyDictionary()
         self.next_manual_token = 1
         self.selected_edges = set()
         self.selected_subgroups = set()
+        self.gray_out_subgroups = False
         self.open(initial_filename)
+        self.ctrlmgr = controller.ControllersMgr(self)
 
     def open(self, filename):
         self.file = document.VRSketchFile(filename)
@@ -61,6 +62,8 @@ class App(object):
                 if edge_or_face.group in self.selected_subgroups:
                     import selection
                     color = selection.SelectedGroupColorScheme.EDGE
+                elif self.gray_out_subgroups and edge_or_face.group is not self.curgroup:
+                    color = 0x808080
                 else:
                     color = None
                 wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2, color)

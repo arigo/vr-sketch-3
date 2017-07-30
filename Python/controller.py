@@ -54,6 +54,9 @@ class ControllersMgr(object):
             self.tool.cancel()
         self.tool = ToolCls(self.app)
         self.selected_tool = name
+        if self.app.gray_out_subgroups != self.tool.GRAY_OUT_SUBGROUPS:
+            self.app.gray_out_subgroups = self.tool.GRAY_OUT_SUBGROUPS
+            self.app.selection_updated()
 
     def set_temporary_tool(self, tool, ctrl):
         self.tool.cancel()

@@ -5,6 +5,7 @@ DISTANCE_MOVEMENT_TIME = 0.4
 class BaseTool(object):
     KEEP_SELECTION = False
     CANCEL_WHEN_NO_CONTROLLER = True
+    GRAY_OUT_SUBGROUPS = False
 
     def __init__(self, app):
         self.app = app

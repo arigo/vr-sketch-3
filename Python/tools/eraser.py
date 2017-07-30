@@ -12,7 +12,15 @@ class Eraser(BaseTool):
             closest = selection.find_closest(self.app, ctrl.position,
                         ignore=set([selection.find_closest_vertex]),
                         only_group=self.app.curgroup)
+            if isinstance(closest, selection.SelectVoid):
+                closest = selection.find_subgroup(self.app, ctrl.position)
             self.app.flash(EraserPointer(closest.get_point(), ctrl))
+
+            def take_group(start_group):
+                model = self.app.model
+                for group in model.get_subgroups(start_group):
+                    edges.update(model.get_edges(group))
+                    faces.update(model.get_faces(group))
 
             edges = set()
             faces = set()
@@ -24,8 +32,15 @@ class Eraser(BaseTool):
                 all_selected = all(edge in self.app.selected_edges for edge in closest.face.edges)
                 faces.add(closest.face)
                 closest.flash_flat(selection.DELETE_COLOR)
+            elif isinstance(closest, selection.SelectGroup):
+                all_selected = closest.group in self.app.selected_subgroups
+                take_group(closest.group)
+                closest.flash_flat(selection.DELETE_COLOR)
+
             if all_selected:
                 edges.update(self.app.selected_edges)
+                for group1 in self.app.selected_subgroups:
+                    take_group(group1)
 
             for edge in edges:
                 selection.SelectAlongEdge(self.app, edge, 0.5).flash_flat(selection.DELETE_COLOR)
@@ -42,7 +57,8 @@ class Eraser(BaseTool):
             text.append("-%d edge%s" % (len(edges), "s" * (len(edges) > 1)))
 
         for edge in list(edges):
-            assert edge.group is self.app.curgroup
+            if edge.group is not self.app.curgroup:
+                continue
             for e1 in self.app.getcuredges():
                 if ((edge.v1 == e1.v1 and edge.v2 == e1.v2) or
                     (edge.v1 == e1.v2 and edge.v2 == e1.v1)):

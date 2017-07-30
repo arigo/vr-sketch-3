@@ -7,6 +7,7 @@ from .base import BaseTool
 
 
 class Line(BaseTool):
+    GRAY_OUT_SUBGROUPS = True
 
     def handle_hover(self, controllers):
         for ctrl in controllers:
