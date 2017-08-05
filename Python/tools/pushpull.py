@@ -60,7 +60,7 @@ class Pushpull(BaseTool):
         # If the other controller is over a position, guide orthogonally.
         if other_ctrl is not None:
             closest2 = selection.find_closest(self.app, other_ctrl.position)
-            self.app.flash(CrossPointer(closest2.get_point(), other_ctrl))
+            self.app.flash(CrossPointer(closest2.get_point()))
             #ortho = False
             #subspace1 = None
             #if isinstance(closest2, selection.SelectOnFace):

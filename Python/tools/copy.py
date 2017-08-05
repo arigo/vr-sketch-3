@@ -70,7 +70,7 @@ class Copy(BaseTemporaryTool):
         selection_guides = []
         if other_ctrl is not None:
             closest2 = selection.find_closest(self.app, other_ctrl.position)
-            self.app.flash(CrossPointer(closest2.get_point(), other_ctrl))
+            self.app.flash(CrossPointer(closest2.get_point()))
 
             # Get the "guides" from the other controller's selection, which are
             # affine subspaces, and find if one of the vertices we're moving is

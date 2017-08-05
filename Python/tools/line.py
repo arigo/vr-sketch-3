@@ -76,7 +76,7 @@ class Line(BaseTool):
             if not isinstance(closest2.get_subspace(), SinglePoint):
                 if abs(other_ctrl.position - self.source_position) < selection.DISTANCE_VERTEX_MIN:
                     closest2 = selection.SelectVertex(self.app, self.source_position)
-            self.app.flash(CrossPointer(closest2.get_point(), other_ctrl))
+            self.app.flash(CrossPointer(closest2.get_point()))
 
             # Get the "guides" from the other controller's selection, which are
             # affine subspaces, and find if we're close to one of them
