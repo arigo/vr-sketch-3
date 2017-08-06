@@ -39,3 +39,33 @@ def newgroup(app):
     #XXX missing
 
     app.execute_step(step)
+
+
+def explodegroup(app):
+    if len(app.selected_subgroups) != 1:
+        return
+    [subgroup] = app.selected_subgroups
+    app.selected_subgroups.clear()
+    app.selected_edges.clear()
+
+    ng = app.curgroup
+    step = ModelStep(app.model, "Explode group")
+
+    # Move edges to the current group
+    copies = {}
+    for e in app.model.get_edges(subgroup):
+        copies[e] = step.add_edge(ng, e.v1, e.v2)
+        step.fe_remove.add(e)
+
+    # Move faces to the current group
+    for face in app.model.get_faces(subgroup):
+        step.add_face([copies[e] for e in face.edges])
+        step.fe_remove.add(face)
+
+    # Move sub-subgroups
+    #XXX
+
+    app.execute_step(step)
+
+    app.selected_edges.update(copies.values())
+    app.selection_updated(also_faces=True)

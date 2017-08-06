@@ -216,8 +216,8 @@ class App(object):
         self.new_submenu([
             ("copy",         "Copy" if m > 0 else "(Copy)"),
             ("newgroup",     "Make new group" if m > 1 else "(Make new group)"),
-            ("mirrorgroup",  "Mirror group" if False else "(Mirror group)"),   #XXX
-            ("explodegroup", "Explode group" if False else "(Explode group)"), #XXX
+            ("mirrorgroup",  "Mirror subgroup" if False else "(Mirror subgroup)"),   #XXX
+            ("explodegroup", "Explode subgroup" if g1 else "(Explode subgroup)"),
             ("editgroup",    "Edit subgroup" if g1 else "(Edit subgroup)"),
             ("closegroup",   "Close cur. group" if gp else "(Close cur. group)"),
         ])
@@ -230,6 +230,10 @@ class App(object):
     def _handle_click_newgroup(self):
         import grouping
         grouping.newgroup(self)
+
+    def _handle_click_explodegroup(self):
+        import grouping
+        grouping.explodegroup(self)
 
     def _handle_click_editgroup(self):
         if len(self.selected_subgroups) == 1:
