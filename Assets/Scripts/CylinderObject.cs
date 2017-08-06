@@ -7,6 +7,7 @@ public class CylinderObject : WorldObject
 {
     public float y_scale;
     static MaterialCache mcache;
+    static MaterialCache mcache_highlight;
 
     public override void UpdateWorldObject(WorldScript ws, float[] data)
     {
@@ -23,23 +24,24 @@ public class CylinderObject : WorldObject
         if (p1 != p2)
             transform.localRotation = Quaternion.LookRotation(p2 - p1) * Quaternion.LookRotation(Vector3.up);
 
-        if (kind != WorldScript.Kind.SelectedStem)
+        Color col = data.Length > 6 ? GetColor24(data, 6) : Color.clear;   /* Color.clear == use default */
+        Color col2 = data.Length > 7 ? GetColor24(data, 7) : col;
+        foreach (var rend in GetComponentsInChildren<MeshRenderer>())
         {
-            if (data.Length > 6)
-            {
-                Color col = GetColor24(data, 6);
-                Color col2 = data.Length > 7 ? GetColor24(data, 7) : col;
-                foreach (var rend in GetComponentsInChildren<MeshRenderer>())
-                {
-                    rend.sharedMaterial = mcache.Get(col);
-                    Color swap = col; col = col2; col2 = swap;
-                }
-            }
-            else
-            {
-                foreach (var rend in GetComponentsInChildren<MeshRenderer>())
-                    rend.sharedMaterial = mcache.Get();
-            }
+            rend.sharedMaterial = mcache.Get(col);
+            Color swap = col; col = col2; col2 = swap;
+        }
+        if (kind == WorldScript.Kind.SelectedStem)
+        {
+            var rend = GetComponentInChildren<MeshRenderer>();
+            var mats = rend.sharedMaterials;
+
+            if (mcache_highlight == null)
+                mcache_highlight = new MaterialCache(mats[1],
+                    MaterialCache.BuildHighlightMaterial);
+
+            mats[1] = mcache_highlight.Get(col);
+            rend.sharedMaterials = mats;
         }
     }
 }

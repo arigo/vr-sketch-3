@@ -18,29 +18,26 @@ public class PolygonObject : WorldObject
 
         ComputeMesh(vertices);
 
-        Material mat;
-        if (kind == WorldScript.Kind.PolygonHighlight)
-        {
-            if (mcache_highlight == null)
-                mcache_highlight = new MaterialCache(GetComponent<MeshRenderer>().sharedMaterial, BuildHighlightMaterial);
-            mat = mcache_highlight.Get(GetColor24(data, vertices.Length * 3));
-        }
-        else
+        var rend = GetComponent<MeshRenderer>();
+        var mats = rend.sharedMaterials;
+        var index = 0;
+        var dataindex = vertices.Length * 3;
+
+        if (kind != WorldScript.Kind.PolygonHighlight)
         {
             if (mcache == null)
-                mcache = new MaterialCache(GetComponent<MeshRenderer>().sharedMaterial);
-            if (kind == WorldScript.Kind.ColoredPolygon)
-                mat = mcache.Get(GetColor24(data, vertices.Length * 3));
-            else
-                mat = mcache.Get();
+                mcache = new MaterialCache(mats[index]);
+            Color col = dataindex < data.Length ? GetColor24(data, dataindex++) : 
+                Color.clear;    /* Color.clear == use default */
+            mats[index++] = mcache.Get(col);
         }
-        GetComponent<MeshRenderer>().sharedMaterial = mat;
-    }
-
-    static void BuildHighlightMaterial(Material mat, Color col)
-    {
-        mat.SetColor("g_vOutlineColor", col);
-        mat.SetColor("g_vMaskedOutlineColor", Color.Lerp(Color.black, col, 0.7f));
+        if (index < mats.Length)
+        {
+            if (mcache_highlight == null)
+                mcache_highlight = new MaterialCache(mats[index], MaterialCache.BuildHighlightMaterial);
+            mats[index++] = mcache_highlight.Get(GetColor24(data, dataindex++));
+        }
+        rend.sharedMaterials = mats;
     }
 
     void ComputeMesh(Vector3[] vertices)

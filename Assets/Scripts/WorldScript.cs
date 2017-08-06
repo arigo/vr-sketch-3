@@ -11,6 +11,7 @@ public class WorldScript : MonoBehaviour
         Polygon = 101,
         ColoredPolygon = 102,
         PolygonHighlight = 103,
+        SelectedPolygon = 104,
         TextHint = 150,
         SmallSphere = 200,
         RectanglePointer = 201,

@@ -56,12 +56,13 @@ class App(object):
                 for e1 in self.selected_edges:
                     if ((e1.v1 == edge_or_face.v1 and e1.v2 == edge_or_face.v2) or
                         (e1.v1 == edge_or_face.v2 and e1.v2 == edge_or_face.v1)):
-                        wo = worldobj.SelectedStem(edge_or_face.v1, edge_or_face.v2)
+                        wo = worldobj.SelectedStem(edge_or_face.v1, edge_or_face.v2, 0x800080, 0xFF00FF)
                         break
             if wo is None:
                 if edge_or_face.group in self.selected_subgroups:
-                    import selection
-                    color = selection.SelectedGroupColorScheme.EDGE
+                    #import selection
+                    #color = selection.SelectedGroupColorScheme.EDGE
+                    color = 0x800080
                 elif self.gray_out_subgroups and edge_or_face.group is not self.curgroup:
                     color = 0x808080
                 else:
@@ -70,8 +71,9 @@ class App(object):
         elif isinstance(edge_or_face, model.Face):
             vertices = [edge.v1 for edge in edge_or_face.edges]
             if edge_or_face.group in self.selected_subgroups:
-                import selection
-                wo = worldobj.ColoredPolygon(vertices, selection.SelectedGroupColorScheme.FACE)
+                #import selection
+                #wo = worldobj.ColoredPolygon(vertices, selection.SelectedGroupColorScheme.FACE)
+                wo = worldobj.SelectedPolygon(vertices, 0xFFC0FF, 0xFF00FF)
             else:
                 wo = worldobj.Polygon(vertices)
         else:

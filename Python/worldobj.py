@@ -21,18 +21,24 @@ class Polygon(WorldObject):
 class ColoredPolygon(Polygon):
     _kind = 102
 
-    def __init__(self, vertices, color):
+    def __init__(self, vertices, color, color2=None):
         Polygon.__init__(self, vertices)
         self.color = color
+        self.color2 = color2
     
     def getrawdata(self):
         lst = Polygon.getrawdata(self)
         lst.append(self.color)
+        if self.color2 is not None:
+            lst.append(self.color2)
         return lst
 
 
 class PolygonHighlight(ColoredPolygon):
     _kind = 103
+
+class SelectedPolygon(ColoredPolygon):
+    _kind = 104
 
 
 class SmallSphere(WorldObject):
@@ -114,9 +120,6 @@ class DashedStem(Stem):
 
 class SelectedStem(Stem):
     _kind = 253
-
-    def __init__(self, end1, end2):
-        Stem.__init__(self, end1, end2, 0)   # color is unused
 
 
 def _text2raw(text):

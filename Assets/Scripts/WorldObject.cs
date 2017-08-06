@@ -50,14 +50,22 @@ public abstract class WorldObject : MonoBehaviour
             build_delegate = build != null ? build : BuildDefaultMaterial;
         }
 
-        static void BuildDefaultMaterial(Material mat, Color col)
+        static public void BuildDefaultMaterial(Material mat, Color col)
         {
             mat.color = col;
+        }
+
+        static public void BuildHighlightMaterial(Material mat, Color col)
+        {
+            mat.SetColor("g_vOutlineColor", col);
+            mat.SetColor("g_vMaskedOutlineColor", Color.Lerp(Color.black, col, 0.7f));
         }
 
         public Material Get(Color col)
         {
             Material mat;
+            if (col == Color.clear)
+                return Get();
             if (!cache.TryGetValue(col, out mat))
             {
                 mat = new Material(base_material);
