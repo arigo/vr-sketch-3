@@ -50,6 +50,14 @@ class App(object):
                 self.pending_removes.setdefault(kind, []).append(index)
 
     def _add_edge_or_face(self, edge_or_face):
+        mode = "current"
+        if edge_or_face.group is self.curgroup:
+            pass
+        elif edge_or_face.group in self.selected_subgroups:
+            mode = "selected_subgroup"
+        elif self.gray_out_subgroups or edge_or_face.group.parent is not self.curgroup:
+            mode = "elsewhere"
+
         if isinstance(edge_or_face, model.Edge):
             wo = None
             if edge_or_face.group is self.curgroup:
@@ -59,23 +67,18 @@ class App(object):
                         wo = worldobj.SelectedStem(edge_or_face.v1, edge_or_face.v2, 0x800080, 0xFF00FF)
                         break
             if wo is None:
-                if edge_or_face.group in self.selected_subgroups:
-                    #import selection
-                    #color = selection.SelectedGroupColorScheme.EDGE
-                    color = 0x800080
-                elif self.gray_out_subgroups and edge_or_face.group is not self.curgroup:
-                    color = 0x808080
-                else:
-                    color = None
+                color = {"current": None,
+                         "selected_subgroup": 0x800080,
+                         "elsewhere": 0x606060}[mode]
                 wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2, color)
         elif isinstance(edge_or_face, model.Face):
             vertices = [edge.v1 for edge in edge_or_face.edges]
-            if edge_or_face.group in self.selected_subgroups:
-                #import selection
-                #wo = worldobj.ColoredPolygon(vertices, selection.SelectedGroupColorScheme.FACE)
-                wo = worldobj.SelectedPolygon(vertices, 0xFFC0FF, 0xFF00FF)
-            else:
+            if mode == "current":
                 wo = worldobj.Polygon(vertices)
+            elif mode == "selected_subgroup":
+                wo = worldobj.SelectedPolygon(vertices, 0xFFC0FF, 0xFF00FF)
+            else:  # mode == "elsewhere"
+                wo = worldobj.ColoredPolygon(vertices, 0x757575)
         else:
             raise AssertionError(repr(edge_or_face))
         self.model2worldobj[edge_or_face] = wo
@@ -109,6 +112,15 @@ class App(object):
             self._add_edge_or_face(edge)
         for face in faces:
             self._add_edge_or_face(face)
+
+    def _remove_all_selection(self):
+        self.selected_edges.clear()
+        self.selected_subgroups.clear()
+
+    def change_group(self, newgroup):
+        self.curgroup = newgroup
+        self._remove_all_selection()
+        self.selection_updated(also_faces=True)
 
     def getcuredges(self):
         return self.model.get_edges(self.curgroup)
@@ -199,11 +211,15 @@ class App(object):
 
     def _handle_click_edit(self):
         m = len(self.selected_edges) + len(self.selected_subgroups)
+        g1 = len(self.selected_subgroups) == 1
+        gp = self.curgroup.parent is not None
         self.new_submenu([
             ("copy",         "Copy" if m > 0 else "(Copy)"),
             ("newgroup",     "Make new group" if m > 1 else "(Make new group)"),
             ("mirrorgroup",  "Mirror group" if False else "(Mirror group)"),   #XXX
             ("explodegroup", "Explode group" if False else "(Explode group)"), #XXX
+            ("editgroup",    "Edit subgroup" if g1 else "(Edit subgroup)"),
+            ("closegroup",   "Close cur. group" if gp else "(Close cur. group)"),
         ])
 
     def _handle_click_copy(self):
@@ -215,6 +231,14 @@ class App(object):
         import grouping
         grouping.newgroup(self)
 
+    def _handle_click_editgroup(self):
+        if len(self.selected_subgroups) == 1:
+            newgroup, = self.selected_subgroups
+            self.change_group(newgroup)
+
+    def _handle_click_closegroup(self):
+        if self.curgroup.parent is not None:
+            self.change_group(self.curgroup.parent)
 
     def fetch_manual_token(self, owner, key):
         try:
