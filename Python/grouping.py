@@ -25,7 +25,7 @@ def newgroup(app):
     remaining_edges = set()
     for face in app.model.get_faces(app.curgroup):
         if all(e in copies for e in face.edges):
-            step.add_face([copies[e] for e in face.edges])
+            step.add_face([copies[e] for e in face.edges], paired_with=face)
             step.fe_remove.add(face)
         else:
             remaining_edges.update(face.edges)
@@ -59,7 +59,7 @@ def explodegroup(app):
 
     # Move faces to the current group
     for face in app.model.get_faces(subgroup):
-        step.add_face([copies[e] for e in face.edges])
+        step.add_face([copies[e] for e in face.edges], paired_with=face)
         step.fe_remove.add(face)
 
     # Move sub-subgroups

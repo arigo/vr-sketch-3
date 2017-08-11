@@ -94,13 +94,14 @@ class Pushpull(BaseTool):
             self.model_step.fe_remove.add(self.source_face)
         new_edges = [self.model_step.add_edge(self.app.curgroup, new_vertices[i + 1], new_vertices[i])
                      for i in range(-len(new_vertices), 0)]
-        self.model_step.add_face(new_edges[::-1])
+        self.model_step.add_face(new_edges[::-1], paired_with=self.source_face)
         
         for edge1, edge2 in zip(self.source_face.edges, new_edges):
             self.model_step.add_face([edge1,
                                       self.model_step.add_edge(self.app.curgroup, edge1.v2, edge2.v1),
                                       edge2,
-                                      self.model_step.add_edge(self.app.curgroup, edge2.v2, edge1.v1)])
+                                      self.model_step.add_edge(self.app.curgroup, edge2.v2, edge1.v1)],
+                                     paired_with=self.source_face)
 
         self.app.execute_temporary_step(self.model_step)
 

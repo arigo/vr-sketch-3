@@ -38,10 +38,19 @@ ffi.cdef("""
     typedef struct _SUFace *SUFaceRef;
     typedef struct _SULoop *SULoopRef;
     typedef struct _SUVertex *SUVertexRef;
+    typedef struct _SUMaterial *SUMaterialRef;
+    typedef unsigned char SUByte;
 
     struct SUPoint3D {
         double x, y, z;
     };
+
+    typedef struct {
+      SUByte red;
+      SUByte green;
+      SUByte blue;
+      SUByte alpha;
+    } SUColor;
 
     void SUInitialize();
     SU_RESULT SUModelCreateFromFile(SUModelRef *model, const char *file_path);
@@ -55,6 +64,10 @@ ffi.cdef("""
                                 SUVertexRef vertices[], size_t *count);
     SU_RESULT SUVertexGetPosition(SUVertexRef vertex,
                                   struct SUPoint3D *position);
+
+    SU_RESULT SUFaceGetFrontMaterial(SUFaceRef face, SUMaterialRef *material);
+    SU_RESULT SUFaceGetBackMaterial(SUFaceRef face, SUMaterialRef *material);
+    SU_RESULT SUMaterialGetColor(SUMaterialRef material, SUColor *color);
 """)
 
 lib = ffi.dlopen(os.path.join(DIR, 'SketchUpAPI.dll'))
@@ -65,6 +78,18 @@ def err(code):
     if code != 0:
         text = ffi.string(ffi.cast("SU_RESULT", code))
         raise ValueError(text)
+
+def get_face_color(face, meth):
+    matref_p = ffi.new("SUMaterialRef[1]")
+    if getattr(lib, meth)(face, matref_p) != 0:
+        return None
+    matref = matref_p[0]
+    color_p = ffi.new("SUColor[1]")
+    if lib.SUMaterialGetColor(matref, color_p) != 0:
+        return None
+    return (color_p.red << 16 |
+            color_p.green << 8 |
+            color_p.blue)
 
 
 def load(filename):
@@ -113,8 +138,13 @@ def load(filename):
 
         edges = [step.add_edge(step.model.root_group, v_list[j - 1], v_list[j])
                  for j in range(len(v_list))]
-        step.add_face(edges)
+        face = step.add_face(edges)
         # XXX this misses the edges that are not attached to faces
+
+        color = get_face_color(faces[i], "SUFaceGetFrontMaterial")
+        if color is None:
+            color = get_face_color(faces[i], "SUFaceGetBackMaterial")
+        face.physics = model.Physics(color=color)
 
     step._apply_to_model()
     return step.model

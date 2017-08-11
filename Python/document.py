@@ -1,6 +1,6 @@
 import os
 import json
-from model import Edge, Face, Model, ModelStep, Group
+from model import Edge, Face, Model, ModelStep, Group, Physics
 from util import Vector3
 
 HEADER = "vrsketch"
@@ -99,7 +99,8 @@ class VRSketchFile(object):
                             assert edge_id.startswith('e')
                             eid = int(edge_id[1:])
                             edges.append(edges_by_eid[eid])
-                        item = Face(edges, fid=fid)
+                        physics = Physics(color=add1.get("color"))
+                        item = Face(edges, fid=fid, physics=physics)
                         faces_by_fid[fid] = item
                     else:
                         raise ValueError(add_id)
@@ -201,8 +202,11 @@ def write_model_step(f, model_step):
                 adds1.append(d)
             elif isinstance(fe, Face):
                 edges = ["e%d" % e.eid for e in fe.edges]
-                adds2.append({"id": "f%d" % fe.fid,
-                              "edges": edges})
+                d = {"id": "f%d" % fe.fid,
+                     "edges": edges}
+                if fe.physics.color != 0xffffff:
+                    d["color"] = fe.physics.color
+                add1.append(d)
             else:
                 raise TypeError(type(fe))
         entry["add"] = adds1 + adds2

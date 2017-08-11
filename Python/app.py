@@ -74,7 +74,11 @@ class App(object):
         elif isinstance(edge_or_face, model.Face):
             vertices = [edge.v1 for edge in edge_or_face.edges]
             if mode == "current":
-                wo = worldobj.Polygon(vertices)
+                color = edge_or_face.physics.color
+                if color == 0xffffff:
+                    wo = worldobj.Polygon(vertices)
+                else:
+                    wo = worldobj.ColoredPolygon(vertices, color)
             elif mode == "selected_subgroup":
                 wo = worldobj.SelectedPolygon(vertices, 0xFFC0FF, 0xFF00FF)
             else:  # mode == "elsewhere"

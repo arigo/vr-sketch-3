@@ -72,12 +72,17 @@ class Edge(object):
         return -EPSILON < frac < 1 + EPSILON and distance < EPSILON
 
 
+class Physics(object):
+    def __init__(self, color=None):
+        self.color = color if color is not None else 0xffffff
+
+
 class Face(object):
     _NUMBER = 1
     _UPDATE_PLANE = True
     group = None
 
-    def __init__(self, edges, fid=None):
+    def __init__(self, edges, fid=None, physics=None):
         self.group = edges[0].group
         for edge in edges:
             assert edge.group is self.group
@@ -87,6 +92,7 @@ class Face(object):
         if Face._NUMBER <= fid:
             Face._NUMBER = fid + 1
         self.fid = fid
+        self.physics = physics or Physics()
         if Face._UPDATE_PLANE:
             self._update_plane()
 
@@ -315,8 +321,9 @@ class ModelStep(object):
         self.fe_add.append(edge)
         return edge
 
-    def add_face(self, edges):
-        face = Face(edges)
+    def add_face(self, edges, paired_with=None):
+        physics = paired_with.physics if paired_with is not None else None
+        face = Face(edges, physics=physics)
         self.fe_add.append(face)
         return face
 
@@ -334,7 +341,7 @@ class ModelStep(object):
                                                 paired_with=edge)
         for face in move_faces:
             edges = [edges_old2new.get(edge, edge) for edge in face.edges]
-            self.add_face(edges)
+            self.add_face(edges, paired_with=face)
 
     def move_vertices(self, old2new, move_edges, move_faces):
         def map_v(v):
@@ -429,7 +436,7 @@ class ModelStep(object):
                 edges = face.edges[:]
                 i = edges.index(edge)
                 edges[i] = copy
-                self.fe_add.append(Face(edges))
+                self.fe_add.append(Face(edges, physics=face.physics))
         return copy
 
     def consolidate_subdivide_edges_group(self, group):
@@ -570,8 +577,8 @@ class ModelStep(object):
             edges2.append(self.add_edge(face.group, current_branch[k], current_branch[k + 1]))
 
         self.fe_remove.add(face)
-        self.add_face(edges1)
-        self.add_face(edges2)
+        self.add_face(edges1, paired_with=face)
+        self.add_face(edges2, paired_with=face)
         return True
 
     def consolidate_subdivide_faces_group(self, group):
