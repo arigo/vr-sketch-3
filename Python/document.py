@@ -206,7 +206,7 @@ def write_model_step(f, model_step):
                      "edges": edges}
                 if fe.physics.color != 0xffffff:
                     d["color"] = fe.physics.color
-                add1.append(d)
+                adds1.append(d)
             else:
                 raise TypeError(type(fe))
         entry["add"] = adds1 + adds2

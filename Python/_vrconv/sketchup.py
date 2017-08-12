@@ -87,9 +87,9 @@ def get_face_color(face, meth):
     color_p = ffi.new("SUColor[1]")
     if lib.SUMaterialGetColor(matref, color_p) != 0:
         return None
-    return (color_p.red << 16 |
-            color_p.green << 8 |
-            color_p.blue)
+    return (color_p[0].red << 16 |
+            color_p[0].green << 8 |
+            color_p[0].blue)
 
 
 def load(filename):
