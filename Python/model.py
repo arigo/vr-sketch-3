@@ -330,14 +330,14 @@ class ModelStep(object):
     def remove(self, edge_or_face):
         self.fe_remove.add(edge_or_face)
 
-    def _move_by(self, map_v, move_edges, move_faces):
+    def _move_by(self, map_v, move_edges, move_faces, change_group=lambda group: group):
         self.fe_remove.update(move_edges)
         self.fe_remove.update(move_faces)
         edges_old2new = {}
 
         # xxx bad complexity here
         for edge in move_edges:
-            edges_old2new[edge] = self.add_edge(edge.group, map_v(edge.v1), map_v(edge.v2),
+            edges_old2new[edge] = self.add_edge(change_group(edge.group), map_v(edge.v1), map_v(edge.v2),
                                                 paired_with=edge)
         for face in move_faces:
             edges = [edges_old2new.get(edge, edge) for edge in face.edges]
@@ -356,6 +356,21 @@ class ModelStep(object):
             move_edges = self.model.get_edges(group)
             move_faces = self.model.get_faces(group)
             self._move_by(lambda v: v + delta, move_edges, move_faces)
+
+    def move_group_in_hierarchy(self, start_group, end_group):
+        new_groups = {start_group: end_group}
+        def get_or_make_new_group(g):
+            try:
+                return new_groups[g]
+            except KeyError:
+                assert g.parent is not None    # bogus parent?
+                parent = get_or_make_new_group(g.parent)
+                ng = new_groups[g] = Group(parent)
+                return ng
+        for group in self.model.get_subgroups(start_group):
+            move_edges = self.model.get_edges(group)
+            move_faces = self.model.get_faces(group)
+            self._move_by(lambda v: v, move_edges, move_faces, get_or_make_new_group)
 
     def _adjust(self, v_old, v_new):
         for fe in self.fe_add:

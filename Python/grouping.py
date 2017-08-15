@@ -6,7 +6,7 @@ def newgroup(app):
         if e.group is not app.curgroup:
             app.selected_edges.discard(e)
     for g in list(app.selected_subgroups):
-        if g.parent_group is not app.curgroup:
+        if g.parent is not app.curgroup:
             app.selected_subgroups.discard(g)
     app.selection_updated(also_faces=True)
 
@@ -36,7 +36,8 @@ def newgroup(app):
             step.fe_remove.add(e)
 
     # Move all selected groups
-    #XXX missing
+    for g in list(app.selected_subgroups):
+        step.move_group_in_hierarchy(g, Group(ng))
 
     app.execute_step(step)
 
@@ -48,24 +49,12 @@ def explodegroup(app):
     app.selected_subgroups.clear()
     app.selected_edges.clear()
 
-    ng = app.curgroup
     step = ModelStep(app.model, "Explode group")
 
-    # Move edges to the current group
-    copies = {}
-    for e in app.model.get_edges(subgroup):
-        copies[e] = step.add_edge(ng, e.v1, e.v2)
-        step.fe_remove.add(e)
-
-    # Move faces to the current group
-    for face in app.model.get_faces(subgroup):
-        step.add_face([copies[e] for e in face.edges], paired_with=face)
-        step.fe_remove.add(face)
-
-    # Move sub-subgroups
-    #XXX
+    # Move edges, faces and sub-subgroups to the current group
+    step.move_group_in_hierarchy(subgroup, app.curgroup)
 
     app.execute_step(step)
 
-    app.selected_edges.update(copies.values())
+    #app.selected_edges.update(copies.values())
     app.selection_updated(also_faces=True)

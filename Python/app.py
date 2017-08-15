@@ -50,13 +50,14 @@ class App(object):
                 self.pending_removes.setdefault(kind, []).append(index)
 
     def _add_edge_or_face(self, edge_or_face):
-        mode = "current"
         if edge_or_face.group is self.curgroup:
-            pass
+            mode = "current"
         elif edge_or_face.group in self.selected_subgroups:
             mode = "selected_subgroup"
-        elif self.gray_out_subgroups or edge_or_face.group.parent is not self.curgroup:
+        elif self.gray_out_subgroups or not edge_or_face.group.issubgroup(self.curgroup):
             mode = "elsewhere"
+        else:
+            mode = "subgroup"
 
         if isinstance(edge_or_face, model.Edge):
             wo = None
@@ -68,12 +69,13 @@ class App(object):
                         break
             if wo is None:
                 color = {"current": None,
+                         "subgroup": 0x808080,
                          "selected_subgroup": 0x800080,
                          "elsewhere": 0x606060}[mode]
                 wo = worldobj.Stem(edge_or_face.v1, edge_or_face.v2, color)
         elif isinstance(edge_or_face, model.Face):
             vertices = [edge.v1 for edge in edge_or_face.edges]
-            if mode == "current":
+            if mode == "current" or mode == "subgroup":
                 color = edge_or_face.physics.color
                 if color == 0xffffff:
                     wo = worldobj.Polygon(vertices)
@@ -214,6 +216,7 @@ class App(object):
         self.new_submenu(lst)
 
     def _handle_click_edit(self):
+        print self.selected_subgroups
         m = len(self.selected_edges) + len(self.selected_subgroups)
         g1 = len(self.selected_subgroups) == 1
         gp = self.curgroup.parent is not None

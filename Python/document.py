@@ -200,15 +200,14 @@ def write_model_step(f, model_step):
                         repr_group[fe.group] = '/'.join(reversed(items))
                     d["group"] = repr_group[fe.group]
                 adds1.append(d)
-            elif isinstance(fe, Face):
+        for fe in model_step.fe_add:
+            if isinstance(fe, Face):
                 edges = ["e%d" % e.eid for e in fe.edges]
                 d = {"id": "f%d" % fe.fid,
                      "edges": edges}
                 if fe.physics.color != 0xffffff:
                     d["color"] = fe.physics.color
                 adds1.append(d)
-            else:
-                raise TypeError(type(fe))
         entry["add"] = adds1 + adds2
 
     _emit_json(f, entry)
