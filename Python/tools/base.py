@@ -52,9 +52,7 @@ class BaseTool(object):
         self._all_controllers = controllers
         if self._clicking_gen is None:
             ctrl = self.handle_hover(controllers)
-            if ctrl is not None:
-                self._follow_ctrl = ctrl
-                self._clicking_gen = self._clicking(ctrl)
+            self._following(ctrl)
 
         elif self._follow_ctrl not in controllers:
             if controllers or self.CANCEL_WHEN_NO_CONTROLLER:
@@ -65,10 +63,17 @@ class BaseTool(object):
                 self._clicking_gen.next()
             except StopIteration:
                 self._clicking_gen = None
-                self.handle_accept()
+                continue_tracking = self.handle_accept()
+                if continue_tracking:
+                    self._following(self._follow_ctrl)
             else:
                 other_ctrl = self.other_ctrl(self._follow_ctrl, controllers)
                 self.handle_drag(self._follow_ctrl, other_ctrl)
+
+    def _following(self, ctrl):
+        if ctrl is not None:
+            self._follow_ctrl = ctrl
+            self._clicking_gen = self._clicking(ctrl)
 
     def _clicking(self, follow_ctrl):
         # detect movements or release of the trigger to distinguish between two modes:

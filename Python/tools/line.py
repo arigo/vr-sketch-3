@@ -28,6 +28,7 @@ class Line(BaseTool):
                     self.source_position = closest.get_point()
                     self.target_position = self.source_position
                     self.fixed_distance = None
+                    self.continue_tracking = False
                     return ctrl
                 else:
                     self.action_new_face(new_vertices)
@@ -40,12 +41,16 @@ class Line(BaseTool):
             step.add_edge(self.app.curgroup, self.source_position, self.target_position)
             self.app.execute_step(step)
 
+            self.source_position = self.target_position
+            return self.continue_tracking
+
     def handle_drag(self, follow_ctrl, other_ctrl=None):
         # Compute the target "selection" object from what we hover over
         closest = selection.find_closest(self.app, follow_ctrl.position)
 
         # Start computing the affine subspace for alignments
         subspace = closest.get_subspace()
+        self.continue_tracking = subspace._DIMENSIONALITY >= 2
 
         # Get the "guides" from the initial selection, which are
         # affine subspaces, and find if we're close to one of them

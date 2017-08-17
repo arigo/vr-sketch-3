@@ -112,6 +112,7 @@ def load(filename):
     retrieved_p = ffi.new("size_t[1]")
     err(lib.SUEntitiesGetFaces(entitiesref, numfaces, faces, retrieved_p))
     retrieved = retrieved_p[0]
+    print "There are %d faces" % retrieved
 
     position_p = ffi.new("struct SUPoint3D *")
 
