@@ -216,7 +216,7 @@ class App(object):
         self.new_submenu(lst)
 
     def _handle_click_edit(self):
-        print self.selected_subgroups
+        #print self.selected_subgroups
         m = len(self.selected_edges) + len(self.selected_subgroups)
         g1 = len(self.selected_subgroups) == 1
         gp = self.curgroup.parent is not None

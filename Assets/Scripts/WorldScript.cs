@@ -32,7 +32,7 @@ public class WorldScript : MonoBehaviour
 
     /***************************************************************************************************/
 
-    public GameObject distanceKeypadPrefab, referential;
+    public GameObject distanceKeypadPrefab, referential, teleportEnabler;
 
     VRSketch3.PythonThread python_thread;
 
@@ -124,6 +124,17 @@ public class WorldScript : MonoBehaviour
 
     public void ShowMenu(int controller_num, string menu_string)
     {
+        if (controller_num == 2000)    /* enable teleporter */
+        {
+            teleportEnabler.SetActive(true);
+            return;
+        }
+        if (controller_num == 2001)    /* disable teleporter */
+        {
+            teleportEnabler.SetActive(false);
+            return;
+        }
+
         var menu = new Menu();
         foreach (var line in menu_string.Split('\n'))
         {

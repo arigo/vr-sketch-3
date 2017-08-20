@@ -34,9 +34,9 @@ class Controller(object):
         s = u'\n'.join(['%s\t%s' % (id, text) for (id, text) in items])
         _show_menu(self._index + (1000 if force else 0), s)
 
-
+    
 class ControllersMgr(object):
-    TOOLS = ["select", "eraser", "line", "rectangle", "pushpull", "move"]
+    TOOLS = ["select", "eraser", "line", "rectangle", "pushpull", "move", "teleport"]
     TOOL_NAMES = {"line": "Draw Line/Face",
                   "pushpull": "Push/Pull"}
 
@@ -52,6 +52,7 @@ class ControllersMgr(object):
         ToolCls = getattr(module, name.capitalize())
         if self.tool is not None:
             self.tool.cancel()
+            self.tool.unselect_now()
         self.tool = ToolCls(self.app)
         self.selected_tool = name
         if self.app.gray_out_subgroups != self.tool.GRAY_OUT_SUBGROUPS:
@@ -61,6 +62,7 @@ class ControllersMgr(object):
     def set_temporary_tool(self, tool, ctrl):
         self.tool.cancel()
         if tool.enable_temporary_tool(ctrl):
+            self.tool.unselect_now()
             self.tool = tool
 
     def unset_temporary_tool(self):

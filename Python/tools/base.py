@@ -20,6 +20,9 @@ class BaseTool(object):
             self._clicking_gen = None
             self.handle_cancel()
 
+    def unselect_now(self):
+        pass
+
 
     # ----- methods to override -----
 
